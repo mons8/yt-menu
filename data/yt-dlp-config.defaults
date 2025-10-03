@@ -1,0 +1,61 @@
+  GNU nano 8.3                                        /home/m/.config/yt-dlp/config
+--paths '/media/m/storage/Project backup/YT/tmp3'
+--output "%(channel)s - %(title)s.%(upload_date)s.%(autonumber)02d.%(ext)s"
+
+# Restrict filenames to only ASCII characters, and avoid "&" and spaces in filenames
+--windows-filenames
+
+## Download all the available subtitles
+#--all-subs
+
+# English subs languages config only, --embed-subs or --write-subs needed for actual output
+--write-auto-subs --sub-langs "^en(-[a-zA-Z]+)*$"
+
+# Do not exit on error, crucial for downloading subtitles (wherein not finding a specific language results in an error)
+-i
+
+# Merge subtitles into video file
+--embed-subs
+
+# Embed metadata to the video file. Also adds chapters to file
+--embed-metadata
+
+# Write description (separate file)
+--write-description
+
+# Write comments (separate file)
+--write-comments
+
+# Do not overwrite existing output files
+#--no-overwrites
+
+# Download only the video, if the URL refers to a video AND a playlist
+--no-playlist
+
+# Number of seconds to sleep before each download when used alone or a lower bound of a range for randomized sleep before each down>
+--min-sleep-interval 1
+--max-sleep-interval 2
+
+# Number of fragments of a dash/hlsnative video that should be download concurrently (default is 1)
+--concurrent-fragments 4
+
+# Download the video with smallest resolution no worse than 720p,
+# or the video with the largest resolution available if there is no such video,
+# preferring better codec and then larger total bitrate for the same resolution
+-S "lang,+res:720,codec,br"
+
+# -S "lang" above selects for best quality unless not default audio stream
+
+
+
+
+
+
+
+
+
+
+
+
+
+

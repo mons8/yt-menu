@@ -1,0 +1,137 @@
+#!/bin/bash
+
+# --- If this script is not run from an interactive terminal, it eventually crashes the system lol.
+# --- Below is a check for this.
+if ! [ -t 0 ]; then
+    echo "This script must be run interactively from a terminal." >&2
+    exit 1
+fi
+# --------------------
+
+# Source the master environment file. It defines WORK_DIR, VENV_PYTHON, YTDLP_COMMAND.
+# The path is relative to this script's location.
+source "$(dirname "$0")/../lib/environment.sh"
+
+# --- IMPORTANT: USER CONFIGURATION ---
+# There is no standard command to open a new terminal. You MUST edit the
+# TERMINAL_CMD variable below to match your system. Uncomment what applies if applicable.
+#
+# --- Examples for Linux ---
+# For GNOME Terminal (most Ubuntu/Fedora systems):
+# TERMINAL_CMD="gnome-terminal --"
+#
+# For KDE Konsole:
+TERMINAL_CMD="konsole -e"
+#
+# For XFCE Terminal:
+# TERMINAL_CMD="xfce4-terminal -e"
+#
+# --- Example for macOS ---
+# TERMINAL_CMD="osascript -e 'tell app \"Terminal\" to do script'"
+# ----------------------------------------
+
+# Styling block
+# ------------
+# Reset to no styling
+NC='\e[0m'
+# Regular
+RED='\e[0;31m'
+GREEN='\e[0;32m'
+YELLOW='\e[0;33m'
+WHITE='\e[0;37m'
+# Bold
+B_RED='\e[1;31m'
+B_GREEN='\e[1;32m'
+B_YELLOW='\e[1;33m'
+B_WHITE='\e[1;37m'
+# Box-drawing characters
+BOX_V="│" # Vertical
+BOX_H="─" # Horizontal
+BOX_TL="┌" # Top-Left
+BOX_TR="┐" # Top-Right
+BOX_BL="└" # Bottom-Left
+BOX_BR="┘" # Bottom-Right
+# -------------
+
+
+# =============================================================================
+# --- MENU CONFIGURATION ---
+# To add, remove, or reorder items, just edit this array.
+# The script will automatically handle the numbering.
+# Format: "COLOR_CODE|Menu Description|path/to/script.sh"
+# For the exit option, use "EXIT" as the script path.
+# =============================================================================
+menu_items=(
+    "$B_GREEN|Album|$B_WHITE|mp3|$WORK_DIR/libexec/yt-album.sh"
+    "$B_GREEN|Crawl URL and download all playlists as albums|$B_WHITE|mp3|$WORK_DIR/libexec//yt-albums_plural.sh"
+    "$B_GREEN|Song(s)|$B_WHITE|mp3|$WORK_DIR/libexec/yt-song.sh"
+    "$WHITE|Comments|$B_WHITE|json|$WORK_DIR/libexec/yt-comments.sh"
+    "$B_GREEN|Normal yt-dlp|$B_WHITE|defaults (likely video)|$WORK_DIR/libexec/yt-regular.sh"
+    "$B_YELLOW|Edit yt-dlp defaults file|||$WORK_DIR/libexec/yt-config_edit.sh"
+    "$B_RED|Exit|||EXIT"
+)
+# =============================================================================
+
+
+# git pull for up-to-date yt-dlp
+echo "Checking for yt-dlp updates..."
+git -C "$WORK_DIR/vendor/yt-dlp" pull
+
+# The command that will be run in the new terminal.
+# It executes target script then pauses and waits for Enter before closing.
+WRAPPER_CMD="bash -c '%s; printf \"\n--- Press ENTER to close. All is well. ---\"; read'"
+
+# Main menu loop
+while true; do
+    # Clear the screen for a clean menu display
+    clear
+    echo ""
+
+    # Display the menu options by looping through the array
+    i=1
+    for item in "${menu_items[@]}"; do
+        # Parse the item string using the pipe '|' delimiter
+        IFS='|' read -r color description color_f format  _ <<< "$item"
+        echo -e "${color}${i} - ${description}${NC} ${color_f} ${format}${NC}"
+        ((i++))
+    done
+    echo ""
+
+    # Prompt for user input.
+    printf "${B_WHITE}Choice: ${NC}"
+    read -r -n 1 choice
+    echo ""
+    echo ""
+
+    # Validate that the choice is a number and within the valid range
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#menu_items[@]}" ]; then
+        printf "Invalid option. Keypress was interpreted as: '%q'\n" "$choice"
+        sleep 2 # Pause so the user can see the error
+        continue # Skip the rest of the loop and restart
+    fi
+
+    # Get the chosen script from the array (adjust for 0-based index)
+    index=$((choice - 1))
+    chosen_item="${menu_items[$index]}"
+    IFS='|' read -r _ _ _ _ target_script <<< "$chosen_item" # Discard color and description
+
+    if [[ "$target_script" == "EXIT" ]]; then
+        echo "Exiting."
+        exit 0
+    elif [ -n "$target_script" ]; then
+        echo "Launching '$target_script' in a new window..."
+        
+        # Build the final command to be executed.
+        final_cmd=$(printf "$WRAPPER_CMD" "$target_script")
+
+        # Execute the terminal command in the background (&) USING XWAYLAND (QT_QPA_PLATFORM=xcb).
+        QT_QPA_PLATFORM=xcb $TERMINAL_CMD "$final_cmd" &
+    else
+        # This case should not be reached with the current setup, but it's good practice
+        echo "Error: No script defined for this option."
+        sleep 2
+    fi
+
+done
+
+exit 0

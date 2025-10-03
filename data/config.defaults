@@ -1,0 +1,11 @@
+# Main configuration for yt-menu scripts.
+# The scripts will prompt you if any required path is left empty.
+
+# Base directory for full album downloads (used by yt-album.sh, yt-albums_plural.sh)
+ALBUM_DIR=
+
+# Base directory for single song downloads (used by yt-song.sh)
+SONG_DIR=
+
+# Base directory for comment JSON files (used by yt-comments.sh)
+COMMENT_DIR=

@@ -1,0 +1,29 @@
+# Work in progress
+/.wip-ignore/
+
+# Editor-specific swap/temporary files
+*.kate-swp
+*.swp
+*.swo
+
+# macOS system files
+.DS_Store
+
+# User-specific configuration (if any)
+.env
+.cfg
+
+# Dependencies folder contains cloned yt-dlp repo
+vendor/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# Config files
+config/*
+!config/.gitkeep
+
+# Temp-files
+tmp/
