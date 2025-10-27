@@ -10,3 +10,12 @@ VENV_PYTHON="$WORK_DIR/.venv/bin/python3"
 
 # Define the full, non-argument part of the command by replicating the exec line.
 YTDLP_COMMAND="$VENV_PYTHON -Werror -Xdev $WORK_DIR/vendor/yt-dlp/yt_dlp/__main__.py"
+
+# MODERN: Robust array for new and updated scripts.
+# Use with "${YTDLP_COMMAND_ARRAY[@]}"
+YTDLP_COMMAND_ARRAY=(
+    "$VENV_PYTHON"
+    "-Werror"
+    "-Xdev"
+    "$WORK_DIR/vendor/yt-dlp/yt_dlp/__main__.py"
+)

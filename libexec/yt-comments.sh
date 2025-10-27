@@ -34,7 +34,7 @@ if [ -z "$comments_basedir" ]; then
         exit 1
     fi
 else
-    echo "Using base directory from $config_file: $comments_basedir"
+    echo "Using base directory from yt-comments.cfg: $comments_basedir"
 fi
 # --- End Configuration ---
 # This block runs if the file didn't exist, was unreadable, or was empty.
@@ -54,9 +54,9 @@ if [ -z "$comments_basedir" ]; then
     echo "$comments_basedir" > "$config_file"
     echo "Music Base Directory set to: $comments_basedir"
     echo "Saved to $config_file"
-else
-    # The path was successfully read from the config file.
-    echo "Using base directory from yt-comments.cfg: $comments_basedir"
+# else
+#     # The path was successfully read from the config file.
+#     echo "Using base directory from yt-comments.cfg: $comments_basedir"
 fi
 # --- End Configuration ---
 
@@ -73,8 +73,9 @@ $YTDLP_COMMAND \
     --write-comments \
     --skip-download \
     --ignore-config \
+    --write-description \
     --paths "$comments_basedir" \
     --output "%(channel)s - %(title)s [%(id)s].%(upload_date)s.%(ext)s" \
     "$url"
 
-## yt-dlp --write-comments --skip-download --ignore-config -P "$music_basedir" "$url"
+## yt-dlp --write-comments --write-description --skip-download --ignore-config -P "$music_basedir" "$url"

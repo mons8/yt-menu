@@ -48,44 +48,38 @@ if [ -z "$target_url" ]; then
     echo "Target URL cannot be empty. Exiting."
     exit 1
 fi
-
-printf "Input NEW folder name under %s (or leave blank): " "$music_basedir"
-read -r subfolder_name
+# This prompts for creation of new subfolder but it adds another prompt, a whole extra step. I don't like it
+# printf "Input NEW folder name under %s (or leave blank): " "$music_basedir"
+# read -r subfolder_name
 
 
 # --- Prepare and Execute yt-dlp ---
 
-# To avoid repeating the long command, we define the common arguments first.
-YT_DLP_ARGS=(
-    -f bestaudio
+download_path="$music_basedir"
+if [ -n "$subfolder_name" ]; then
+    download_path="$music_basedir/$subfolder_name"
+fi
+echo "Downloading song(s) to \"$download_path\""
+
+# Consolidate all arguments into a single array for robust execution.
+# Note the correction to --replace-in-metadata syntax.
+yt_dlp_final_args=(
+    -P "$download_path"
+    -o '%(channel)s - %(title)s.%(ext)s'
+    -f 'bestaudio'
     --extract-audio
     --audio-format mp3
     --audio-quality 0
     --embed-thumbnail
     --ignore-config
     --no-playlist
-    --parse-metadata "playlist_index:(?P<meta_track>.*)"
-    --parse-metadata ":(?P<meta_date>)"
+    --parse-metadata 'playlist_index:(?P<meta_track>.*)'
+    --parse-metadata ':(?P<meta_date>)'
     --embed-metadata
-    --replace-in-metadata "channel" " - Topic$" ""
+    --replace-in-metadata 'channel' ' - Topic$' ''
+    "$target_url"
 )
 
-# Determine the final download path based on user input.
-if [ -z "$subfolder_name" ]; then
-    # Case 1: No subfolder provided. Download directly to the base path.
-    download_path="$music_basedir"
-    echo "Downloading song(s) to \"$download_path\""
-else
-    # Case 2: Subfolder provided. Combine base path and subfolder name.
-    download_path="$music_basedir/$subfolder_name"
-    echo "Downloading song(s) to \"$download_path\""
-fi
-
-# Execute the final command. This single command handles both cases.
-$YTDLP_COMMAND \
-    -paths "$download_path" \
-    -o '%(channel)s - %(title)s.%(ext)s' \
-    "${YT_DLP_ARGS[@]}" \
-    "$target_url"
+"${YTDLP_COMMAND_ARRAY[@]}" "${yt_dlp_final_args[@]}"
 
 exit 0

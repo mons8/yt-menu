@@ -65,7 +65,7 @@ menu_items=(
     "$B_GREEN|Album|$B_WHITE|mp3|$WORK_DIR/libexec/yt-album.sh"
     "$B_GREEN|Crawl URL and download all playlists as albums|$B_WHITE|mp3|$WORK_DIR/libexec//yt-albums_plural.sh"
     "$B_GREEN|Song(s)|$B_WHITE|mp3|$WORK_DIR/libexec/yt-song.sh"
-    "$WHITE|Comments|$B_WHITE|json|$WORK_DIR/libexec/yt-comments.sh"
+    "$WHITE|Comments and description|$B_WHITE|json, plain text|$WORK_DIR/libexec/yt-comments.sh"
     "$B_GREEN|Normal yt-dlp|$B_WHITE|defaults (likely video)|$WORK_DIR/libexec/yt-regular.sh"
     "$B_YELLOW|Edit yt-dlp defaults file|||$WORK_DIR/libexec/yt-config_edit.sh"
     "$B_RED|Exit|||EXIT"
@@ -76,10 +76,6 @@ menu_items=(
 # git pull for up-to-date yt-dlp
 echo "Checking for yt-dlp updates..."
 git -C "$WORK_DIR/vendor/yt-dlp" pull
-
-# The command that will be run in the new terminal.
-# It executes target script then pauses and waits for Enter before closing.
-WRAPPER_CMD="bash -c '%s; printf \"\n--- Press ENTER to close. All is well. ---\"; read'"
 
 # Main menu loop
 while true; do
@@ -113,7 +109,7 @@ while true; do
     # Get the chosen script from the array (adjust for 0-based index)
     index=$((choice - 1))
     chosen_item="${menu_items[$index]}"
-    IFS='|' read -r _ _ _ _ target_script <<< "$chosen_item" # Discard color and description
+    IFS='|' read -r _ _ _ _ target_script <<< "$chosen_item" # Discard color,  description, color, file type
 
     if [[ "$target_script" == "EXIT" ]]; then
         echo "Exiting."
@@ -121,11 +117,15 @@ while true; do
     elif [ -n "$target_script" ]; then
         echo "Launching '$target_script' in a new window..."
         
-        # Build the final command to be executed.
-        final_cmd=$(printf "$WRAPPER_CMD" "$target_script")
+        script_string=$(printf '%s; printf "\\n--- Press ENTER to close. All is well. ---"; read' "$target_script")
 
-        # Execute the terminal command in the background (&) USING XWAYLAND (QT_QPA_PLATFORM=xcb).
-        QT_QPA_PLATFORM=xcb $TERMINAL_CMD "$final_cmd" &
+        # Split TERMINAL_CMD into an array to handle it robustly.
+        # This prevents issues if the variable were, e.g., 'x-terminal-emulator -e'.
+        terminal_cmd_array=($TERMINAL_CMD)
+
+        # Execute the terminal command in the background (&) USING XWAYLAND (QT_QPA_PLATFORM=xcb)
+        # passing "bash", "-c", and our script string as three separate arguments.
+        QT_QPA_PLATFORM=xcb "${terminal_cmd_array[@]}" bash -c "$script_string" &
     else
         # This case should not be reached with the current setup, but it's good practice
         echo "Error: No script defined for this option."
