@@ -27,7 +27,7 @@ The installation process is automated.
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repository-url>
+    git clone https://github.com/mons8/yt-menu.git
     cd yt-menu
     ```
 
@@ -44,8 +44,6 @@ The installation process is automated.
     - Install Playwright's necessary browser binaries.
 
 ## Usage
-
-After installation, run the main executable from the project root:
 
 ```bash
 ./bin/yt-menu
