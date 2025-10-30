@@ -78,9 +78,10 @@ else
     git clone https://github.com/yt-dlp/yt-dlp.git "$YTDLP_DIR"
 fi
 
-# --- 4. Download and Install FFmpeg/FFprobe Binaries ---
+# --- 4. Download and Install FFmpeg/FFprobe Binaries (GPL Compliant) ---
 echo -e "\n--- Downloading and Extracting FFmpeg/FFprobe ---"
 FFMPEG_ARCHIVE="$PROJECT_ROOT/ffmpeg-archive.tar.xz"
+FFMPEG_COMPLIANCE_DIR="$PROJECT_ROOT/FFMPEG_GPL_MATERIALS"
 
 # Download the archive
 $DOWNLOAD_CMD "$FFMPEG_ARCHIVE" "$FFMPEG_URL"
@@ -89,17 +90,31 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Extract only the necessary binaries to the yt-dlp vendor directory
-# NOTE: yt-dlp checks for ffmpeg/ffprobe in the same directory as its own executable.
-tar -xf "$FFMPEG_ARCHIVE" --strip-components=2 -C "$YTDLP_DIR" \
-    "ffmpeg-master-latest-linux64-gpl/bin/ffmpeg" \
-    "ffmpeg-master-latest-linux64-gpl/bin/ffprobe"
+# Create directory for full extraction
+mkdir -p "$FFMPEG_COMPLIANCE_DIR"
 
-# Make sure they are executable
-chmod +x "$YTDLP_DIR/ffmpeg" "$YTDLP_DIR/ffprobe"
-
-# Clean up the archive
+# Extract the ENTIRE contents of the archive to directory
+# The --strip-components=1 removes the top-level folder from the archive
+echo "Extracting full FFmpeg package..."
+tar -xf "$FFMPEG_ARCHIVE" --strip-components=1 -C "$FFMPEG_COMPLIANCE_DIR"
+# Clean up archive
 rm "$FFMPEG_ARCHIVE"
+
+# Move the FFmpeg binaries
+# NOTE: yt-dlp checks for ffmpeg/ffprobe in the same directory as its own executable.
+echo "Placing binaries in vendor directory..."
+mv "$FFMPEG_COMPLIANCE_DIR/bin/ffmpeg" "$YTDLP_DIR/ffmpeg"
+mv "$FFMPEG_COMPLIANCE_DIR/bin/ffprobe" "$YTDLP_DIR/ffprobe"
+chmod +x "$YTDLP_DIR/ffmpeg" "$YTDLP_DIR/ffprobe"
+# Clean up the now-unneeded bin directory from the compliance materials
+rm -rf "$FFMPEG_COMPLIANCE_DIR/bin"
+
+
+echo -e "\n${B_GREEN}GPL COMPLIANCE NOTICE:${NC}"
+echo "The complete and corresponding FFmpeg source code"
+echo "has been saved to the following directory:"
+echo "    $FFMPEG_COMPLIANCE_DIR"
+echo "These materials are required to legally use and redistribute this software."
 
 
 # --- 5. Install Python Dependencies ---
