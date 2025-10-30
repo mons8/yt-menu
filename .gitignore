@@ -1,11 +1,12 @@
 # WIP
 .wip-ignore/
 libexec/config-wizard.sh
+docs/improvement.md
 
 # editor-specific swap/temporary files
-*.kate-swp
-*.swp
-*.swo
+.kate-swp
+.swp
+.swo
 
 # macOS system files
 .DS_Store
@@ -16,7 +17,7 @@ vendor/
 # python
 .venv/
 __pycache__/
-*.pyc
+.pyc
 
 # configuration
 config/*

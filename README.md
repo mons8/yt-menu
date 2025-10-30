@@ -71,4 +71,4 @@ Thanks for using and feedback is welcome.
 
 ## License
 
-GNU GPLv2+
+GNU GPLv3+

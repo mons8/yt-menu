@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# Copyright (C) 2025 mons8 <115350611+mons8@users.noreply.github.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+
 # --- Configuration ---
 # Get the absolute path of the script's directory (i.e., the project root)
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -80,42 +97,51 @@ fi
 
 # --- 4. Download and Install FFmpeg/FFprobe Binaries (GPL Compliant) ---
 echo -e "\n--- Downloading and Extracting FFmpeg/FFprobe ---"
-FFMPEG_ARCHIVE="$PROJECT_ROOT/ffmpeg-archive.tar.xz"
-FFMPEG_COMPLIANCE_DIR="$PROJECT_ROOT/FFMPEG_GPL_MATERIALS"
+FFMPEG_ARCHIVE_URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+FFMPEG_LOG_URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.log"
+
+FFMPEG_ARCHIVE_PATH="$PROJECT_ROOT/ffmpeg-archive.tar.xz"
+FFMPEG_COMPLIANCE_DIR="$PROJECT_ROOT/ffmpeg_gpl_materials"
+
+# Create the compliance directory upfront
+mkdir -p "$FFMPEG_COMPLIANCE_DIR"
 
 # Download the archive
-$DOWNLOAD_CMD "$FFMPEG_ARCHIVE" "$FFMPEG_URL"
+$DOWNLOAD_CMD "$FFMPEG_ARCHIVE_PATH" "$FFMPEG_ARCHIVE_URL"
 if [ $? -ne 0 ]; then
     echo -e "\n${B_RED}ERROR: Failed to download FFmpeg binaries.${NC}" >&2
     exit 1
 fi
 
-# Create directory for full extraction
-mkdir -p "$FFMPEG_COMPLIANCE_DIR"
+# Download the corresponding build log, which constitutes the "written offer for source"
+echo "Downloading FFmpeg build log for GPL compliance..."
+$DOWNLOAD_CMD "$FFMPEG_COMPLIANCE_DIR/build.log" "$FFMPEG_LOG_URL"
+if [ $? -ne 0 ]; then
+    echo -e "\n${B_RED}ERROR: Failed to download FFmpeg build log. Cannot ensure GPL compliance.${NC}" >&2
+    exit 1
+fi
 
-# Extract the ENTIRE contents of the archive to directory
-# The --strip-components=1 removes the top-level folder from the archive
-echo "Extracting full FFmpeg package..."
-tar -xf "$FFMPEG_ARCHIVE" --strip-components=1 -C "$FFMPEG_COMPLIANCE_DIR"
-# Clean up archive
-rm "$FFMPEG_ARCHIVE"
+# Extract the entire contents of the archive to the compliance directory
+echo "Extracting FFmpeg package..."
+tar -xf "$FFMPEG_ARCHIVE_PATH" --strip-components=1 -C "$FFMPEG_COMPLIANCE_DIR"
+rm "$FFMPEG_ARCHIVE_PATH" # Clean up the archive
 
-# Move the FFmpeg binaries
-# NOTE: yt-dlp checks for ffmpeg/ffprobe in the same directory as its own executable.
+# Move the FFmpeg binaries to the location yt-dlp expects
 echo "Placing binaries in vendor directory..."
 mv "$FFMPEG_COMPLIANCE_DIR/bin/ffmpeg" "$YTDLP_DIR/ffmpeg"
 mv "$FFMPEG_COMPLIANCE_DIR/bin/ffprobe" "$YTDLP_DIR/ffprobe"
 chmod +x "$YTDLP_DIR/ffmpeg" "$YTDLP_DIR/ffprobe"
+
 # Clean up the now-unneeded bin directory from the compliance materials
 rm -rf "$FFMPEG_COMPLIANCE_DIR/bin"
 
-
+# Update the user-facing notice to be precise
 echo -e "\n${B_GREEN}GPL COMPLIANCE NOTICE:${NC}"
-echo "The complete and corresponding FFmpeg source code"
-echo "has been saved to the following directory:"
+echo "This software uses FFmpeg binaries licensed under the GPLv3."
+echo "The FFmpeg license, documentation and build log containing instructions"
+echo "to retrieve the complete corresponding source code are saved to:"
 echo "    $FFMPEG_COMPLIANCE_DIR"
-echo "These materials are required to legally use and redistribute this software."
-
+echo "This is required for you to legally use and redistribute this software."
 
 # --- 5. Install Python Dependencies ---
 echo -e "\n--- Installing Python Dependencies (requests, playwright, curl_cffi) ---"
