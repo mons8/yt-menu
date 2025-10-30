@@ -71,4 +71,4 @@ Thanks for using and feedback is welcome.
 
 ## License
 
-MIT License.
+GNU GPLv2+
