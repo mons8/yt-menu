@@ -153,9 +153,50 @@ echo "Running Playwright's browser installation (this may take a moment)..."
 $VENV_PYTHON -m playwright install
 
 # --- 6. Final Steps ---
+
+# Make executables executable
+CHMOD_DIRS=(
+  "$PROJECT_ROOT/bin"
+  "$PROJECT_ROOT/libexec"
+)
+
+# Loop through each target directory
+for dir in "${CHMOD_DIRS[@]}"; do
+  # Check if the directory actually exists
+  if [ -d "$dir" ]; then
+    echo "--- Processing directory: $dir ---"
+
+    # List files in the specific directory and pipe to the while loop
+    ls -1 "$dir" | while read filename; do
+      # IMPORTANT: We must use the full path for the check and the command
+      full_path="$dir/$filename"
+
+      if [ -f "$full_path" ]; then
+        echo "Making executable: $full_path"
+        chmod +x "$full_path"
+      fi
+    done
+  else
+    echo "Warning: Directory $dir not found, skipping"
+  fi
+done
+
+echo "Done."
+for file in *
+do
+  # Check if the item is a regular file
+  if [ -f "$file" ]; then
+    # Assign the executable permission
+    chmod +x "$file"
+    echo "$file sucessfully made executable."
+  fi
+done
+
+echo "Done."
 echo -e "\n--- Installation Complete ---"
 echo "To begin using the scripts, activate the venv and run yt-menu:"
 echo -e "    ${GREEN}. .venv/bin/activate${NC}"
 echo -e "    ${GREEN}./bin/yt-menu${NC}"
+
 
 exit 0

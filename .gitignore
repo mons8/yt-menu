@@ -30,3 +30,5 @@ tmp/
 
 # FFmpeg licence compliance
 FFMPEG_GPL_MATERIALS/
+ffmpeg_gpl_materials/
+ffmpeg-archive.tar.xz
