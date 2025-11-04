@@ -1,31 +1,34 @@
-# Work in progress
+# WIP
 .wip-ignore/
 libexec/config-wizard.sh
+docs/improvement.md
 
-# Editor-specific swap/temporary files
-*.kate-swp
-*.swp
-*.swo
+# editor-specific swap/temporary files
+.kate-swp
+.swp
+.swo
 
 # macOS system files
 .DS_Store
 
-# User-specific configuration (if any)
-.env
-.cfg
-
-# Dependencies folder contains cloned yt-dlp repo
+# vendor
 vendor/
 
 # python
 .venv/
 __pycache__/
-*.pyc
+.pyc
 
-# Config files
+# configuration
 config/*
 !config/.gitkeep
+.env
+.cfg
 
-# Temp-files
+# temp
 tmp/
 
+# FFmpeg licence compliance
+FFMPEG_GPL_MATERIALS/
+ffmpeg_gpl_materials/
+ffmpeg-archive.tar.xz
