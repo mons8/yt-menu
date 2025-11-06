@@ -7,12 +7,6 @@ VENV_DIR="$PROJECT_ROOT/.venv"
 VENDOR_DIR="$PROJECT_ROOT/vendor"
 YTDLP_DIR="$VENDOR_DIR/yt-dlp"
 FFMPEG_URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
-
-# Colors for output
-GREEN='\033[0;32m'
-B_RED='\033[1;31m'
-B_YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
 # ---------------------
 
 echo "--- Starting Project Installation ---"
@@ -116,47 +110,6 @@ $VENV_PIP install --upgrade requests curl_cffi playwright
 # Playwright needs to download browser binaries *after* installation.
 echo "Running Playwright's browser installation (this may take a moment)..."
 $VENV_PYTHON -m playwright install
-
-# --- START: SECTION FOR SYSTEM-WIDE TOOLS ---
-
-# --- 5.5 Optional System-Wide Tools (jq, deno) ---
-echo -e "\n--- Optional System-Wide Tools ---"
-read -p "$(echo -e "${B_YELLOW}jq and deno must be installed system-wide for optimal functioning of yt-menu and yt-dlp, respectively. Proceed? [y/N] ${NC}")" response
-
-if [[ "$response" =~ ^[Yy]$ ]]; then
-    echo -e "\nProceeding with optional installations..."
-
-    # --- Install jq ---
-    echo -e "\n--- Checking for jq ---"
-    if command -v jq &> /dev/null; then
-        echo "jq is already installed."
-    else
-        if command -v apt &> /dev/null; then
-            echo "Attempting to install jq using apt. You may be prompted for your password."
-            sudo apt update && sudo apt install -y jq
-        else
-            echo -e "${B_YELLOW}'apt' not found. Please install 'jq' manually with your systems package manager.${NC}"
-            echo -e "${B_YELLOW} 'jq' is necessary for advanced metadata processing.${NC}"
-        fi
-    fi
-
-    # --- Install deno ---
-    echo -e "\n--- Checking for deno ---"
-    if command -v deno &> /dev/null; then
-        echo "deno is already installed."
-    else
-        echo "Attempting to install deno..."
-        echo -e "${B_YELLOW}The Deno installer is ${B_RED}interactive, ${B_YELLOW}Please follow its prompts.${NC}"
-        curl -fsSL https://deno.land/install.sh | sh
-    fi
-
-else
-    echo -e "\nSkipping installation of optional system-wide tools."
-    echo -e "${B_YELLOW}Note: 'jq' is necessary for advanced metadata processing and 'deno' is required for full yt-dlp functionality.${NC}"
-fi
-
-# --- END: NEW SECTION FOR OPTIONAL TOOLS ---
-
 
 # --- 6. Final Steps ---
 echo -e "\n--- Installation Complete ---"
