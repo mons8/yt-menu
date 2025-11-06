@@ -160,8 +160,7 @@ fi
 
 # --- 6. Final Steps ---
 echo -e "\n--- Installation Complete ---"
-echo "To begin using the scripts, activate the venv and run yt-menu:"
-echo -e "    ${GREEN}. .venv/bin/activate${NC}"
+echo "Run yt-menu by:"
 echo -e "    ${GREEN}./bin/yt-menu${NC}"
 
 exit 0
