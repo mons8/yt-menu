@@ -4,6 +4,8 @@
 
 It manages its own up-to-date copies of `yt-dlp` and `FFmpeg` and handles its own Python dependencies without polluting the user's global system.
 
+<img width="868" height="249" alt="20251106_104838" src="https://github.com/user-attachments/assets/472f4fcb-e6e1-4a23-b124-5ae75326cf7e" />
+
 ## Features
 
 - **Menu-Driven Interface:** Simple, numbered menu for common download tasks.
