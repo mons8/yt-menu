@@ -161,39 +161,35 @@ if [ "$prompt_menu_requested" = true ]; then
         esac
     done
 
-    # --- NEW: ASSEMBLE LLM INSTRUCTIONS ---
+    # --- ASSEMBLE LLM INSTRUCTIONS (MODIFIED) ---
     echo "[yt-menu] -----------------------------------------------------"
     echo "[yt-menu] Assembling LLM instructions..."
 
-    # 1. Build a JSON array string for the tasks. This is safer than trying to pass a bash array.
     tasks_json_array="[]"
     if [ ${#selected_tasks[@]} -gt 0 ]; then
-        task_prompts_for_jq=()
-        for prompt in "${selected_tasks[@]}"; do
-            task_prompts_for_jq+=(--arg item "$prompt")
-        done
         tasks_json_array=$(jq -n '[$ARGS.positional]' --args "${!selected_tasks[@]}")
     fi
 
-    # 2. Use jq to construct the final instructions object from shell variables.
-    #    The `with_entries(select(.value != "" and .value != []))` part cleverly removes any keys that were left blank.
+    # Use jq to construct the final instructions object with the new key names.
     llm_instructions_json=$(jq -n \
         --arg format "$selected_formatting_prompt" \
         --arg tone "$selected_tone_prompt" \
         --argjson tasks "$tasks_json_array" \
         --arg custom "$custom_prompt" \
-        '{format: $format, tone: $tone, tasks: $tasks, custom: $custom} | with_entries(select(.value | IN("", [], null) | not))')
+        '{
+            "text-formatting": $format,
+            "tone-and-timbre": $tone,
+            "essential-tasks-instructions-considerations": $tasks,
+            "high-priority-instruction": $custom
+        } | with_entries(select(.value | IN("", [], null) | not))')
 
-    # Check if we actually have any instructions
     if [ -z "$llm_instructions_json" ] || [ "$llm_instructions_json" == "{}" ]; then
         echo "[yt-menu] No LLM instructions were selected. Skipping injection."
         llm_instructions_json=""
     else
         echo "[yt-menu] LLM instructions assembled successfully."
     fi
-    # --- END OF NEW SECTION ---
-
-fi # End of prompt_menu_requested block
+fi
 
 # --- END OF MENU ---
 
@@ -312,7 +308,7 @@ if [ -n "$best_sub_file" ]; then
 fi
 echo "[yt-menu] -----------------------------------------------------"
 
-# --- AGGREGATE FINAL LLM PACKAGE ---
+# --- AGGREGATE FINAL LLM PACKAGE (MODIFIED) ---
 echo "[yt-menu] Aggregating all data into a final LLM JSON package..."
 package_basename=$(basename "${base_filename}.llm-package.json")
 temp_package_path="$tmp_dir/$package_basename"
@@ -320,14 +316,10 @@ temp_package_path="$tmp_dir/$package_basename"
 jq_command_args=()
 jq_filter_parts=()
 
-# --- MODIFIED: Conditionally add instructions to the command ---
-# 1. If we have an instructions object, add it as a jq variable.
-#    We use --argjson so jq parses it as a JSON object, not a string.
+# 1. Conditionally add START instructions. We will add the END instructions later.
 if [ -n "$llm_instructions_json" ]; then
     jq_command_args+=(--argjson instructions "$llm_instructions_json")
-    # Add the filter parts to the beginning and end of our final object
     jq_filter_parts+=('"llm_instructions_start": $instructions')
-    jq_filter_parts+=('"llm_instructions_end": $instructions')
 fi
 
 # 2. Add the static metadata key.
@@ -353,14 +345,17 @@ fi
 
 # FINAL JQ EXECUTION
 if [ ${#jq_filter_parts[@]} -gt 0 ]; then
-    # 4. Join all parts with a comma.
-    final_jq_filter="{$(IFS=,; echo "${jq_filter_parts[*]}")}"
+    # 4. Join all parts into the base object filter.
+    base_jq_filter="{$(IFS=,; echo "${jq_filter_parts[*]}")}"
+    final_jq_filter="$base_jq_filter"
 
-    # Reorder the final JSON so instructions and metadata are always first
-    # This is more robust than array ordering.
-    reorder_filter='{llm_instructions_start, llm_instructions_end, metadata} + .'
-    final_jq_filter="$final_jq_filter | $reorder_filter"
-
+    # 5. Conditionally build the final, multi-stage filter.
+    if [ -n "$llm_instructions_json" ]; then
+        # Stage 1: Create the base object (done above).
+        # Stage 2: Reorder to ensure 'llm_instructions_start' and 'metadata' are at the top.
+        # Stage 3: Merge a new object containing 'llm_instructions_end' at the very end.
+        final_jq_filter="$base_jq_filter | {llm_instructions_start, metadata} + . | . + {llm_instructions_end: \$instructions}"
+    fi
 
     jq -n "${jq_command_args[@]}" "$final_jq_filter" > "$temp_package_path"
 
