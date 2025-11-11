@@ -33,104 +33,167 @@ else
     echo "[yt-menu] Using base directory from yt-comments.cfg: $comments_basedir"
 fi
 
-printf "Enter URL for download and append \"+\" for prompt menu. Confirm with Enter: "
-read -r url
+# --- URL INPUT MODIFICATION ---
+# Check if the URL ends with a "+" for the prompt menu
+prompt_menu_requested=false
+printf "Enter URL for download. Append \"+\" for prompt menu. Confirm with Enter: "
+read -r url_input
+if [[ "$url_input" == *+ ]]; then
+    prompt_menu_requested=true
+    url="${url_input%+}" # Remove the trailing '+'
+else
+    url="$url_input"
+fi
+
 if [ -z "$url" ]; then
     echo "[yt-menu] Error: URL cannot be empty." >&2; exit 1;
 fi
 
+
 # --- INTERACTIVE PROMPT SELECTION MENU ---
 
-# Styling
-NC='\e[0m'
-GREEN='\e[0;32m'
-YELLOW='\e[0;33m'
-B_GREEN='\e[1;32m'
-B_YELLOW='\e[1;33m'
-B_WHITE='\e[1;37m'
-CYAN='\e[0;36m'
+# Initialize prompt variables to be empty
+llm_instructions_json=""
+if [ "$prompt_menu_requested" = true ]; then
+    # Styling
+    NC='\e[0m'
+    GREEN='\e[0;32m'
+    YELLOW='\e[0;33m'
+    B_GREEN='\e[1;32m'
+    B_YELLOW='\e[1;33m'
+    WHITE='\e[0;37m'
+    B_WHITE='\e[1;37m'
+    CYAN='\e[0;36m'
 
-# Menu Definition: Category|Menu Text|Prompt Payload
-menu_items=(
-    "FORMAT|Plain-text|Any analysis of this json object must be structured in pure plain-text only."
-    "FORMAT|Markdown spreadsheet|Wherein reasonable and applicable any analysis of this json object must be structured as a Markdown spreadsheet."
-    "TONE|Brilliant & Disagreeable|Any analysis of this json object must have the tone and timbre of that of a virtuous and brilliant mind. Does not care for convention and seeks the truth. Low agreeability. Kind-hearted and severe. Assumes audience is very intelligent. Does not casually or needlessly expound. Keeps it tight. Does not omit anything of interest or pertinence. Has an advanced sense of when to answer tersely and when not to hold anything back."
-    "TASK|Executive Summary|Provide a dense, high-level summary of the video's core message, intended for a knowledgeable and time-constrained audience. Omit pleasantries and introductory phrases."
-    "TASK|Key Takeaways (Bulleted)|Extract the most critical, actionable, or memorable points from the transcript and present them as a concise bulleted list."
-    "TASK|Comment Sentiment Analysis|Analyze the sentiment of the comments section. Identify the dominant emotional tones, categorize the top 3-5 recurring themes or arguments, and note any significant shifts in opinion or common points of confusion."
-    "TASK|Deconstruct Core Argument|Identify the primary thesis of the video. Sequentially list the main arguments or claims made in support of this thesis. For each argument, note the evidence or reasoning provided in the transcript."
-    "TASK|Extract Actionable Items|Scan the transcript and comments for any concrete advice, recommended actions, tools, resources, or unresolved questions. Collate these into a structured list."
-    "CUSTOM|Enter Custom Prompt|-"
-)
+    # Menu Definition: Category|Menu Text|Prompt Payload
+    menu_items=(
+        "FORMAT|Plain-text|Any analysis of this json object must be formatted in pure plain-text, only."
+        "FORMAT|Markdown spreadsheet|Wherein reasonable and applicable any analysis of this json object must be structured as a Markdown spreadsheet."
+        "TONE|Brilliant & Disagreeable|Any analysis of this json object must have the tone and timbre of that of a virtuous and brilliant mind. Does not care for convention and seeks the truth. Low agreeability. Kind-hearted and severe. Assumes audience is very intelligent. Does not casually or needlessly expound. Keeps it tight. Does not omit anything of interest or pertinence. Has an advanced sense of when to answer tersely and when not to hold anything back."
+        "TASK|Executive Summary|Provide a dense, high-level summary of the video's core message, intended for a knowledgeable and time-constrained audience. Omit pleasantries and introductory phrases."
+        "TASK|Key Takeaways (Bulleted)|Extract the most critical, actionable, or memorable points from the transcript and present them as a concise bulleted list."
+        "TASK|Comment Sentiment Analysis|Analyze the sentiment of the comments section. Identify the dominant emotional tones, categorize the top 3-5 recurring themes or arguments, and note any significant shifts in opinion or common points of confusion."
+        "TASK|Deconstruct Core Argument|Identify the primary thesis of the video. Sequentially list the main arguments or claims made in support of this thesis. For each argument, note the evidence or reasoning provided in the transcript."
+        "TASK|Extract Actionable Items|Scan the transcript and comments for any concrete advice, recommended actions, tools, resources, or unresolved questions. Collate these into a structured list."
+        "CUSTOM|Enter Custom Prompt|-"
+    )
 
-# State variables
-selected_formatting_name=""
-selected_formatting_prompt=""
-selected_tone_name=""
+    # State variables
+    selected_formatting_name=""
+    selected_formatting_prompt=""
+    selected_tone_name=""
     selected_tone_prompt=""
-declare -A selected_tasks
-custom_prompt=""
+    declare -A selected_tasks
+    custom_prompt=""
 
-while true; do
-    clear
-    echo -e "${B_WHITE}--- Configure LLM Instructions ---${NC}"
+    while true; do
+        clear
+        echo -e "${B_WHITE}--- Configure LLM Instructions ---${NC}"
 
-    # Display current selections
-    echo -e "${B_YELLOW}Current Selections:${NC}"
-    [ -n "$selected_formatting_name" ] && echo -e "  ${CYAN}Format:${NC} $selected_formatting_name"
-    [ -n "$selected_tone_name" ] && echo -e "  ${CYAN}Tone:${NC} $selected_tone_name"
-    if [ ${#selected_tasks[@]} -gt 0 ]; then
-        echo -e "  ${CYAN}Tasks:${NC}"
-        for task_name in "${!selected_tasks[@]}"; do echo "    - $task_name"; done
-    fi
-    [ -n "$custom_prompt" ] && echo -e "  ${CYAN}Custom Prompt:${NC} [Present]"
-    echo ""
-    # Display menu options
-    i=1
-    for item in "${menu_items[@]}"; do
-        IFS='|' read -r category name _ <<< "$item"
-        
-        status="[ ]"
+        # Display current selections
+        echo -e "${B_YELLOW}Current Selections:${NC}"
+        [ -n "$selected_formatting_name" ] && echo -e "  ${CYAN}Format:${NC} $selected_formatting_name"
+        [ -n "$selected_tone_name" ] && echo -e "  ${CYAN}Tone:${NC} $selected_tone_name"
+        if [ ${#selected_tasks[@]} -gt 0 ]; then
+            echo -e "  ${CYAN}Tasks:${NC}"
+            for task_name in "${!selected_tasks[@]}"; do echo "    - $task_name"; done
+        fi
+        [ -n "$custom_prompt" ] && echo -e "  ${CYAN}Custom Prompt:${NC} [Present]"
+        echo ""
+        # Display menu options
+        i=1
+        for item in "${menu_items[@]}"; do
+            IFS='|' read -r category name _ <<< "$item"
+
+            status="[ ]"
+            case "$category" in
+                FORMAT) [[ "$name" == "$selected_formatting_name" ]] && status="[${GREEN}x${NC}]";;
+                TONE) [[ "$name" == "$selected_tone_name" ]] && status="[${GREEN}x${NC}]";;
+                TASK) [[ -v "selected_tasks[$name]" ]] && status="[${GREEN}x${NC}]";;
+                CUSTOM) [[ -n "$custom_prompt" ]] && status="[${GREEN}x${NC}]";;
+            esac
+
+            category_color=""
+            category_tag=""
+            case "$category" in
+                FORMAT) category_color="$WHITE";    category_tag="[FORMAT]";;
+                TONE)   category_color="$B_YELLOW"; category_tag="[  TONE]";;
+                TASK)   category_color="$GREEN";    category_tag="[  TASK]";;
+                CUSTOM) category_color="$B_WHITE";  category_tag="[CUSTOM]";;
+            esac
+
+            line=$(printf "%2d. %s %-18s %s" "$i" "$status" "${category_color}${category_tag}${NC}" "$name")
+            echo -e "$line"
+            ((i++))
+        done
+        echo ""
+        echo -e "${B_GREEN} d. Done - Proceed with Download${NC}"
+        echo ""
+
+        printf "${B_WHITE}Choice: ${NC}"
+        read -r -n 1 choice
+
+        if [[ "$choice" == "d" || "$choice" == "D" ]]; then break; fi
+        if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#menu_items[@]}" ]; then continue; fi
+
+        index=$((choice - 1))
+        IFS='|' read -r category name prompt <<< "${menu_items[$index]}"
+
         case "$category" in
-            FORMAT) [[ "$name" == "$selected_formatting_name" ]] && status="[${GREEN}x${NC}]";;
-            TONE) [[ "$name" == "$selected_tone_name" ]] && status="[${GREEN}x${NC}]";;
-            TASK) [[ -v "selected_tasks[$name]" ]] && status="[${GREEN}x${NC}]";;
-            CUSTOM) [[ -n "$custom_prompt" ]] && status="[${GREEN}x${NC}]";;
+            FORMAT)
+                selected_formatting_name="$name"; selected_formatting_prompt="$prompt" ;;
+            TONE)
+                selected_tone_name="$name"; selected_tone_prompt="$prompt" ;;
+            TASK)
+                if [[ -v "selected_tasks[$name]" ]]; then unset "selected_tasks[$name]"; else selected_tasks["$name"]="$prompt"; fi ;;
+            CUSTOM)
+                echo -e "\n\n${B_WHITE}Enter your custom multi-line prompt. End with 'EOF' on a new line:${NC}"
+                line=""
+                buffer=""
+                while IFS= read -r line; do
+                    if [[ "$line" == "EOF" ]]; then
+                        break
+                    fi
+                    buffer+="${line}"$'\n'
+                done
+                custom_prompt="${buffer%$'\n'}"
+                ;;
         esac
-
-        # FIX 1: Use printf for formatting, then echo -e to render ANSI codes
-        line=$(printf "%2d. %s %-30s" "$i" "$status" "$name")
-        echo -e "$line"
-        ((i++))
     done
-    echo ""
-    echo -e "${B_GREEN} d. Done - Proceed with Download${NC}"
-    echo ""
 
-    printf "${B_WHITE}Choice: ${NC}"
-    read -r -n 1 choice
+    # --- NEW: ASSEMBLE LLM INSTRUCTIONS ---
+    echo "[yt-menu] -----------------------------------------------------"
+    echo "[yt-menu] Assembling LLM instructions..."
 
-    if [[ "$choice" == "d" || "$choice" == "D" ]]; then break; fi
-    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#menu_items[@]}" ]; then continue; fi
+    # 1. Build a JSON array string for the tasks. This is safer than trying to pass a bash array.
+    tasks_json_array="[]"
+    if [ ${#selected_tasks[@]} -gt 0 ]; then
+        task_prompts_for_jq=()
+        for prompt in "${selected_tasks[@]}"; do
+            task_prompts_for_jq+=(--arg item "$prompt")
+        done
+        tasks_json_array=$(jq -n '[$ARGS.positional]' --args "${!selected_tasks[@]}")
+    fi
 
-    index=$((choice - 1))
-    IFS='|' read -r category name prompt <<< "${menu_items[$index]}"
+    # 2. Use jq to construct the final instructions object from shell variables.
+    #    The `with_entries(select(.value != "" and .value != []))` part cleverly removes any keys that were left blank.
+    llm_instructions_json=$(jq -n \
+        --arg format "$selected_formatting_prompt" \
+        --arg tone "$selected_tone_prompt" \
+        --argjson tasks "$tasks_json_array" \
+        --arg custom "$custom_prompt" \
+        '{format: $format, tone: $tone, tasks: $tasks, custom: $custom} | with_entries(select(.value | IN("", [], null) | not))')
 
-    case "$category" in
-        FORMAT)
-            selected_formatting_name="$name"; selected_formatting_prompt="$prompt" ;;
-        TONE)
-            selected_tone_name="$name"; selected_tone_prompt="$prompt" ;;
-        TASK)
-            if [[ -v "selected_tasks[$name]" ]]; then unset "selected_tasks[$name]"; else selected_tasks["$name"]="$prompt"; fi ;;
-        CUSTOM)
-            echo -e "\n\n${B_CYAN}Enter your custom multi-line prompt. End with 'EOF' on a new line.${NC}"
-            # FIX 2: Use <<- to allow indented here-document delimiter
-            read -r -d '' custom_prompt <<- 'EOF'
-			EOF
-            ;;
-    esac
-done
+    # Check if we actually have any instructions
+    if [ -z "$llm_instructions_json" ] || [ "$llm_instructions_json" == "{}" ]; then
+        echo "[yt-menu] No LLM instructions were selected. Skipping injection."
+        llm_instructions_json=""
+    else
+        echo "[yt-menu] LLM instructions assembled successfully."
+    fi
+    # --- END OF NEW SECTION ---
+
+fi # End of prompt_menu_requested block
 
 # --- END OF MENU ---
 
@@ -198,5 +261,118 @@ echo "[yt-menu] -----------------------------------------------------"
 
 # --- SELECT BEST SUBTITLE ---
 echo "[yt-menu] Selecting best subtitle..."
-shopt -s nullglob; all_sub_files=("$base_filename".*.{srt,ass}); shopt -u nullglob
-best_sub_file=
+shopt -s nullglob
+all_sub_files=("$base_filename".*.{srt,ass})
+shopt -u nullglob
+best_sub_file=""
+if [ ${#all_sub_files[@]} -gt 0 ]; then
+    priorities=("en-en" "en-orig" "en-US" "en")
+    for priority in "${priorities[@]}"; do
+        for file in "${all_sub_files[@]}"; do
+            if [[ "$file" == *."$priority".* ]]; then
+                best_sub_file="$file"; break 2; fi
+        done
+    done
+    if [ -z "$best_sub_file" ]; then
+        best_sub_file="${all_sub_files[0]}"; fi
+fi
+if [ -n "$best_sub_file" ]; then
+    echo "[yt-menu] Best subtitle found: $(basename "$best_sub_file")"
+else
+    echo "[yt-menu] No preferred subtitle file found."
+fi
+echo "[yt-menu] -----------------------------------------------------"
+# --- PROCESS TRANSCRIPTION (FORMAT-AWARE) ---
+structured_transcription_file=""
+if [ -n "$best_sub_file" ]; then
+    echo "[yt-menu] Processing transcription into structured format..."
+
+    case "$best_sub_file" in
+        *.srt)
+            echo "[yt-menu]   -> Detected SRT format. Using srt-processor.py."
+            python_script_path="$WORK_DIR/libexec/srt-processor.py"
+            structured_transcription_file=$("$VENV_PYTHON" "$python_script_path" "$best_sub_file")
+            ;;
+        *.ass)
+            echo "[yt-menu]   -> Detected ASS format. Using ass-processor.py."
+            python_script_path="$WORK_DIR/libexec/ass-processor.py"
+            structured_transcription_file=$("$VENV_PYTHON" "$python_script_path" "$best_sub_file")
+            ;;
+        *)
+            echo "[yt-menu]   -> Warning: Unsupported subtitle format for structuring: $(basename "$best_sub_file")" >&2
+            ;;
+    esac
+
+    if [ ! -s "$structured_transcription_file" ]; then
+        echo "[yt-menu]   -> Warning: Python processor failed to create a valid structured file." >&2
+        structured_transcription_file=""
+    else
+        echo "[yt-menu]   -> Successfully created structured transcription file."
+    fi
+fi
+echo "[yt-menu] -----------------------------------------------------"
+
+# --- AGGREGATE FINAL LLM PACKAGE ---
+echo "[yt-menu] Aggregating all data into a final LLM JSON package..."
+package_basename=$(basename "${base_filename}.llm-package.json")
+temp_package_path="$tmp_dir/$package_basename"
+
+jq_command_args=()
+jq_filter_parts=()
+
+# --- MODIFIED: Conditionally add instructions to the command ---
+# 1. If we have an instructions object, add it as a jq variable.
+#    We use --argjson so jq parses it as a JSON object, not a string.
+if [ -n "$llm_instructions_json" ]; then
+    jq_command_args+=(--argjson instructions "$llm_instructions_json")
+    # Add the filter parts to the beginning and end of our final object
+    jq_filter_parts+=('"llm_instructions_start": $instructions')
+    jq_filter_parts+=('"llm_instructions_end": $instructions')
+fi
+
+# 2. Add the static metadata key.
+jq_command_args+=(--arg title "$video_title" --arg channel "$channel" --arg video_id "$video_id" --arg upload_date "$upload_date" --arg video_url "$video_url")
+jq_filter_parts+=('"metadata": {"title": $title, "channel": $channel, "video_id": $video_id, "upload_date": $upload_date, "url": $video_url}')
+
+# 3. Conditionally add the other data keys.
+if [ -f "$description_file" ]; then
+    jq_command_args+=(--rawfile description_data "$description_file")
+    jq_filter_parts+=('"description": $description_data')
+fi
+
+if [ -n "$structured_transcription_file" ]; then
+    jq_command_args+=(--slurpfile transcription_data "$structured_transcription_file")
+    jq_command_args+=(--arg transcription_format_desc "The transcription is an array where each element is [startTime, endTime, text].")
+    jq_filter_parts+=('"transcription": {"format_description": $transcription_format_desc, "data": $transcription_data[0]}')
+fi
+
+if [ -n "$threaded_comments_file" ]; then
+    jq_command_args+=(--slurpfile comments_data "$threaded_comments_file")
+    jq_filter_parts+=('"comments": $comments_data[0]')
+fi
+
+# FINAL JQ EXECUTION
+if [ ${#jq_filter_parts[@]} -gt 0 ]; then
+    # 4. Join all parts with a comma.
+    final_jq_filter="{$(IFS=,; echo "${jq_filter_parts[*]}")}"
+
+    # Reorder the final JSON so instructions and metadata are always first
+    # This is more robust than array ordering.
+    reorder_filter='{llm_instructions_start, llm_instructions_end, metadata} + .'
+    final_jq_filter="$final_jq_filter | $reorder_filter"
+
+
+    jq -n "${jq_command_args[@]}" "$final_jq_filter" > "$temp_package_path"
+
+    if [ $? -eq 0 ] && [ -s "$temp_package_path" ]; then
+        final_destination_path="$comments_basedir/$package_basename"
+        echo "[yt-menu] Successfully created package, moving to: $final_destination_path"
+        mv "$temp_package_path" "$final_destination_path"
+    else
+        echo "[yt-menu] Error: Failed to create JSON package. JQ exited with an error." >&2; exit 1;
+    fi
+else
+    echo "[yt-menu] No data sources found to aggregate. Skipping package creation."
+fi
+echo "[yt-menu] -----------------------------------------------------"
+echo "[yt-menu] All workflows complete."
