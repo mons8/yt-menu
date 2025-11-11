@@ -36,3 +36,9 @@ YTDLP_COMMAND_ARRAY=(
     "-Xdev"
     "$WORK_DIR/vendor/yt-dlp/yt_dlp/__main__.py"
 )
+
+# Use with "${YTDLP_COMMAND_ARRAY_NONERROR[@]}"
+YTDLP_COMMAND_ARRAY_NONERROR=(
+    "$VENV_PYTHON"
+    "$WORK_DIR/vendor/yt-dlp/yt_dlp/__main__.py"
+)

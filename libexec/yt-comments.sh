@@ -88,6 +88,8 @@ read -r url
 echo "Downloading comments to $comments_basedir"
 $YTDLP_COMMAND \
     --write-comments \
+    --write-auto-subs --sub-langs "^en(-[a-zA-Z]+)*$" \
+    --sub-format "srt/ass/best" \
     --skip-download \
     --ignore-config \
     --write-description \
