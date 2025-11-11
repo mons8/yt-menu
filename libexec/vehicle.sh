@@ -22,7 +22,7 @@ if [ -z "$comments_basedir" ]; then
                 echo "[yt-menu] Path cannot be empty. Please try again."
             fi
         done
-        echo "[yt-menu] $comments_basedir" > "$config_file"
+        echo "$comments_basedir" > "$config_file"
         echo "[yt-menu] Comments Base Directory set to: $comments_basedir"
         echo "[yt-menu] Saved to $config_file"
     else

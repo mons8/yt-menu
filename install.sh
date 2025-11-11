@@ -107,17 +107,15 @@ chmod +x "$YTDLP_DIR/ffmpeg" "$YTDLP_DIR/ffprobe"
 # Clean up the archive
 rm "$FFMPEG_ARCHIVE"
 
+## FFmpeg GPL compliance at end of script
 
-# --- 5. Install Python Dependencies ---
+# --- 5. Python Dependencies ---
 echo -e "\n--- Installing Python Dependencies (requests, playwright, curl_cffi) ---"
 $VENV_PIP install --upgrade requests curl_cffi playwright
 
-# CRITICAL: Install Playwright Browsers
-# Playwright needs to download browser binaries *after* installation.
+# Playwright Browsers
 echo "Running Playwright's browser installation (this may take a moment)..."
 $VENV_PYTHON -m playwright install
-
-# --- START: SECTION FOR SYSTEM-WIDE TOOLS ---
 
 # --- 5.5 Optional System-Wide Tools (jq, deno) ---
 echo -e "\n--- Optional System-Wide Tools ---"
@@ -155,8 +153,65 @@ else
     echo -e "${B_YELLOW}Note: 'jq' is necessary for advanced metadata processing and 'deno' is required for full yt-dlp functionality.${NC}"
 fi
 
-# --- END: NEW SECTION FOR OPTIONAL TOOLS ---
+# GPL Compliance: Build log infom, which constitutes the "written offer for source"
+echo "Fetching release information for GPL compliance..."
 
+FILENAME=$(curl -sL "https://api.github.com/repos/yt-dlp/FFmpeg-Builds/releases" | \
+jq -r '
+  [.[] | select(.tag_name != "latest")][0].assets |
+  .[] | select(.name | test("linux64-gpl.tar.xz$")).name
+')
+
+if [ -z "$FILENAME" ]; then
+    echo -e "\n${B_RED}ERROR: Could not determine FFmpeg build filename from GitHub API.${NC}" >&2
+    exit 1
+fi
+
+COMMIT_HASH=$(echo "$FILENAME" | grep -oP 'g[0-9a-fA-F]+' | head -n 1)
+
+if [ -z "$COMMIT_HASH" ]; then
+    echo -e "\n${B_RED}ERROR: Could not extract commit hash from filename: $FILENAME${NC}" >&2
+    exit 1
+fi
+
+# Write the complete, two-part compliance notice.
+cat > "$FFMPEG_COMPLIANCE_DIR/build_and_source_info.txt" << EOF
+This software utilizes FFmpeg binaries distributed under the GPLv3.
+
+The "Corresponding Source" is provided in two parts:
+
+1. THE FFMPEG SOURCE CODE:
+The binaries were built from the FFmpeg source code identified by the git commit hash
+contained within the build name:
+
+$FILENAME
+
+The source can be obtained by cloning the official FFmpeg git
+repository (git://source.ffmpeg.org/ffmpeg.git) and checking out the commit
+'$COMMIT_HASH'.
+
+2. THE BUILD SCRIPTS AND CONFIGURATION:
+The scripts and configuration flags used to compile the source code are available at
+the repository responsible for this build:
+
+https://github.com/yt-dlp/FFmpeg-Builds
+
+EOF
+
+# User-facing notice to be precise
+echo -e "\n${B_GREEN}GPL COMPLIANCE NOTICE:${NC}"
+echo "This software uses FFmpeg binaries licensed under the GPLv3."
+echo "The FFmpeg license, documentation and build log containing instructions"
+echo "to retrieve the complete corresponding source code are saved to:"
+echo "    $FFMPEG_COMPLIANCE_DIR"
+echo "This is required for you to legally use and redistribute this software."
+
+if [ $? -eq 0 ]; then
+    echo "GPL compliance information successfully saved."
+else
+    echo -e "\n${B_RED}ERROR: Failed to write GPL compliance file.${NC}" >&2
+    exit 1
+fi
 
 # --- 6. Final Steps ---
 echo -e "\n--- Installation Complete ---"
