@@ -33,8 +33,24 @@ else
     echo "[yt-menu] Using base directory from yt-comments.cfg: $comments_basedir"
 fi
 
-printf "Enter URL for download: "
-read -r url
+# --- MODIFICATION START: Prompt Handling ---
+user_prompt=""
+printf "Enter URL for download (append '+' for a follow-up prompt): "
+read -r url_input
+
+if [[ "$url_input" == *+ ]]; then
+    url="${url_input%+}" # Remove the trailing '+'
+    printf "Enter prompt: "
+    read -r user_prompt
+else
+    url="$url_input"
+fi
+
+if [ -z "$url" ]; then
+    echo "[yt-menu] Error: URL cannot be empty." >&2; exit 1;
+fi
+# --- MODIFICATION END: Prompt Handling ---
+
 tmp_dir=$(mktemp -d)
 #trap 'rm -rf "$tmp_dir"' EXIT
 # Replaced above unconditional tmp cleanup with a function which leaves the tmp folder alone if error code exit
@@ -217,6 +233,19 @@ if [ -n "$threaded_comments_file" ]; then
     jq_command_args+=(--slurpfile comments_data "$threaded_comments_file")
     jq_filter_parts+=('"comments": $comments_data[0]')
 fi
+
+# --- MODIFICATION START: Inject User Prompt ---
+# If a user prompt was provided, inject it at the start and end of the JSON.
+# Having two identical keys is invalid JSON; they are named distinctly.
+if [ -n "$user_prompt" ]; then
+    jq_command_args+=(--arg user_prompt "$user_prompt")
+    # Prepend start prompt to filter parts using array expansion
+    jq_filter_parts=("\"user_prompt_start\": \$user_prompt" "${jq_filter_parts[@]}")
+    # Append end prompt to filter parts
+    jq_filter_parts+=("\"user_prompt_end\": \$user_prompt")
+fi
+# --- MODIFICATION END: Inject User Prompt ---
+
 
 # FINAL JQ EXECUTION
 # Only proceed if we have something to build. The metadata part will always be there.
