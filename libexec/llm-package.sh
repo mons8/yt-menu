@@ -65,14 +65,14 @@ if [ "$prompt_menu_requested" = true ]; then
 
     # Menu Definition: Category|Menu Text|Prompt Payload
     menu_items=(
-        "FORMAT|Plain-text|Any analysis of this json object must be formatted in pure plain-text, only."
-        "FORMAT|Markdown spreadsheet|Wherein reasonable and applicable any analysis of this json object must be structured as a Markdown spreadsheet."
-        "TONE|Brilliant & Disagreeable|Any analysis of this json object must have the tone and timbre of that of a virtuous and brilliant mind. Does not care for convention and seeks the truth. Low agreeability. Kind-hearted and severe. Assumes audience is very intelligent. Does not casually or needlessly expound. Keeps it tight. Does not omit anything of interest or pertinence. Has an advanced sense of when to answer tersely and when not to hold anything back."
-        "TASK|Executive Summary|Provide a dense, high-level summary of the video's core message, intended for a knowledgeable and time-constrained audience. Omit pleasantries and introductory phrases."
-        "TASK|Key Takeaways (Bulleted)|Extract the most critical, actionable, or memorable points from the transcript and present them as a concise bulleted list."
-        "TASK|Comment Sentiment Analysis|Analyze the sentiment of the comments section. Identify the dominant emotional tones, categorize the top 3-5 recurring themes or arguments, and note any significant shifts in opinion or common points of confusion."
-        "TASK|Deconstruct Core Argument|Identify the primary thesis of the video. Sequentially list the main arguments or claims made in support of this thesis. For each argument, note the evidence or reasoning provided in the transcript."
-        "TASK|Extract Actionable Items|Scan the transcript and comments for any concrete advice, recommended actions, tools, resources, or unresolved questions. Collate these into a structured list."
+        "FORMAT|Plain-text|Any analysis of this json object must be formatted in pure plain-text only."
+        "FORMAT|Markdown Spreadsheet|Wherein reasonable and applicable any analysis of this json object must be structured as a Markdown spreadsheet."
+        "TONE|Brilliant & disagreeable|Any analysis of this json object must have the tone and timbre of that of a virtuous and brilliant mind. It does not care for convention and seeks the truth. Low agreeability. Kind-hearted and severe. Assumes audience is very intelligent. Does not casually or needlessly expound. Keeps it tight. Does not omit anything of interest or pertinence. Has an advanced sense of when to answer tersely and when not to hold anything back."
+        "TASK|What is the Clickbait?|Provide a pithy answer to any clickbait-quandry posed either in the title or deduced from the description, transcription or comments below."
+        "TASK|Summarize|Provide a dense and accurate summary of the video's core message intended for a knowledgeable and time-constrained audience."
+        "TASK|Criticize|Identify the primary thesis, and smaller supporting points, of the video and brutally criticize it. Construct a fair representation of the arguments made and proceed to disassemble them with surgical precision, focusing on the weakest points, but not over-extending the attack but keeping a balanced center."
+        "TASK|Further Investigations|Extract and collate concrete and actionable intelligence and _build upon it_. In the first instance, include everthing noteworthy from the material at hand with a special consideration to anything actionable. In the second phase (which need not be explicitly structured as such), apply your own discrete and brilliant interpretation and tidbits and clues regarding where to go for further investigate. Structure for maximum utility and immediate application."
+        "TASK|Comment Analysis|Process the comments to provide a valuable briefing. We are interested in the gist of what is said, as well as what the most erudite and elegant comments and discussions bring to the table in this conversation. Use your own judgement regarding how to structure and angle the report. You may detail relevant trends of agreement or disagreement or common points of confusion. It may be beneficial to include a some (or many!) _high-value_ comments verbatim in the report. Do not omit anything of pertinence."
         "CUSTOM|Custom Prompt|-"
     )
 
