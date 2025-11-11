@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# Copyright (C) 2025 mons8 <115350611+mons8@users.noreply.github.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+
 # --- Configuration ---
 # Get the absolute path of the script's directory (i.e., the project root)
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -84,28 +101,45 @@ else
     git clone https://github.com/yt-dlp/yt-dlp.git "$YTDLP_DIR"
 fi
 
-# --- 4. Download and Install FFmpeg/FFprobe Binaries ---
+# --- 4. Download and Install FFmpeg/FFprobe Binaries (GPL Compliant) ---
 echo -e "\n--- Downloading and Extracting FFmpeg/FFprobe ---"
-FFMPEG_ARCHIVE="$PROJECT_ROOT/ffmpeg-archive.tar.xz"
+FFMPEG_ARCHIVE_URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+FFMPEG_LOG_URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.log"
+
+FFMPEG_ARCHIVE_PATH="$PROJECT_ROOT/ffmpeg-archive.tar.xz"
+FFMPEG_COMPLIANCE_DIR="$PROJECT_ROOT/ffmpeg_gpl_materials"
+
+# Create the compliance directory upfront
+mkdir -p "$FFMPEG_COMPLIANCE_DIR"
 
 # Download the archive
-$DOWNLOAD_CMD "$FFMPEG_ARCHIVE" "$FFMPEG_URL"
+$DOWNLOAD_CMD "$FFMPEG_ARCHIVE_PATH" "$FFMPEG_ARCHIVE_URL"
 if [ $? -ne 0 ]; then
     echo -e "\n${B_RED}ERROR: Failed to download FFmpeg binaries.${NC}" >&2
     exit 1
 fi
 
-# Extract only the necessary binaries to the yt-dlp vendor directory
-# NOTE: yt-dlp checks for ffmpeg/ffprobe in the same directory as its own executable.
-tar -xf "$FFMPEG_ARCHIVE" --strip-components=2 -C "$YTDLP_DIR" \
-    "ffmpeg-master-latest-linux64-gpl/bin/ffmpeg" \
-    "ffmpeg-master-latest-linux64-gpl/bin/ffprobe"
+# Download the corresponding build log, which constitutes the "written offer for source"
+echo "Downloading FFmpeg build log for GPL compliance..."
+$DOWNLOAD_CMD "$FFMPEG_COMPLIANCE_DIR/build.log" "$FFMPEG_LOG_URL"
+if [ $? -ne 0 ]; then
+    echo -e "\n${B_RED}ERROR: Failed to download FFmpeg build log. Cannot ensure GPL compliance.${NC}" >&2
+    exit 1
+fi
 
-# Make sure they are executable
+# Extract the entire contents of the archive to the compliance directory
+echo "Extracting FFmpeg package..."
+tar -xf "$FFMPEG_ARCHIVE_PATH" --strip-components=1 -C "$FFMPEG_COMPLIANCE_DIR"
+rm "$FFMPEG_ARCHIVE_PATH" # Clean up the archive
+
+# Move the FFmpeg binaries to the location yt-dlp expects
+echo "Placing binaries in vendor directory..."
+mv "$FFMPEG_COMPLIANCE_DIR/bin/ffmpeg" "$YTDLP_DIR/ffmpeg"
+mv "$FFMPEG_COMPLIANCE_DIR/bin/ffprobe" "$YTDLP_DIR/ffprobe"
 chmod +x "$YTDLP_DIR/ffmpeg" "$YTDLP_DIR/ffprobe"
 
-# Clean up the archive
-rm "$FFMPEG_ARCHIVE"
+# Clean up the now-unneeded bin directory from the compliance materials
+rm -rf "$FFMPEG_COMPLIANCE_DIR/bin"         
 
 ## FFmpeg GPL compliance at end of script
 
@@ -214,6 +248,46 @@ else
 fi
 
 # --- 6. Final Steps ---
+
+# Make executables executable
+CHMOD_DIRS=(
+  "$PROJECT_ROOT/bin"
+  "$PROJECT_ROOT/libexec"
+)
+
+# Loop through each target directory
+for dir in "${CHMOD_DIRS[@]}"; do
+  # Check if the directory actually exists
+  if [ -d "$dir" ]; then
+    echo "--- Processing directory: $dir ---"
+
+    # List files in the specific directory and pipe to the while loop
+    ls -1 "$dir" | while read filename; do
+      # IMPORTANT: We must use the full path for the check and the command
+      full_path="$dir/$filename"
+
+      if [ -f "$full_path" ]; then
+        echo "Making executable: $full_path"
+        chmod +x "$full_path"
+      fi
+    done
+  else
+    echo "Warning: Directory $dir not found, skipping"
+  fi
+done
+
+echo "Done."
+for file in *
+do
+  # Check if the item is a regular file
+  if [ -f "$file" ]; then
+    # Assign the executable permission
+    chmod +x "$file"
+    echo "$file sucessfully made executable."
+  fi
+done
+
+echo "Done."
 echo -e "\n--- Installation Complete ---"
 echo "Run yt-menu by:"
 echo -e "    ${GREEN}./bin/yt-menu${NC}"

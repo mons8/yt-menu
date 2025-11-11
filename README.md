@@ -1,8 +1,21 @@
-# yt-menu: A Shell-Based Media Downloader
+# yt-menu: Shell-Based Media Downloader
 
-`yt-menu` is a self-contained menu-driven command-line interface for `yt-dlp`. It is designed for a consistent and convenient workflow for accessing yt-dlp and downloading video-to-audio as albums or songs and leveraging yt-dlp in other convenient ways.
+`yt-menu` is a convenient and menu-driven feature-rich suite of expanded functionality built upon `yt-dlp`. 
 
-It manages its own up-to-date copies of `yt-dlp` and `FFmpeg` and handles its own Python dependencies without polluting the user's global system.
+**Main functionalities**
+- video-to-audio extraction with sensible ID3 and naming conventions:
+    - albums
+    - songs
+    - entire channels (for albums)
+- metadata
+    - transcription
+    - description
+    - comments (original output or readably processed & minimized)
+    - all of the above in a minimized (token conscious) .json package for llm prompting. 
+
+It manages its own up-to-date copies of `yt-dlp` and `FFmpeg` and handles Python dependencies in `venv` without polluting the user's global system.
+
+<img width="868" height="249" alt="20251106_104838" src="https://github.com/user-attachments/assets/472f4fcb-e6e1-4a23-b124-5ae75326cf7e" />
 
 ## Features
 
@@ -25,23 +38,21 @@ It manages its own up-to-date copies of `yt-dlp` and `FFmpeg` and handles its ow
 
 The installation process is automated.
 
-1.  **Clone the repository:**
+1.  **Clone repository and run install script**
     ```bash
     git clone https://github.com/mons8/yt-menu.git
     cd yt-menu
-    ```
-
-2.  **Run the installation script:**
-    ```bash
+    chmod +x install.sh
     ./install.sh
     ```
-    This script will:
+    instrall.sh script will:
     - Check for required dependencies like `git` and `python3`.
     - Create a local Python virtual environment in `./.venv/`.
-    - Clone the latest `yt-dlp` into `./vendor/yt-dlp/`.
-    - Download the latest `yt-dlp`-compatible `ffmpeg` and `ffprobe` binaries into the vendor directory.
-    - `Pip`-install the required Python packages (`requests`, `playwright`, `curl_cffi`) into virtual environment.
-    - Install Playwright's necessary browser binaries.
+    - Git clone the latest `yt-dlp` into `./vendor/yt-dlp/`.
+    - Download latest `yt-dlp`-specific build of `ffmpeg` and `ffprobe` binaries into the vendor directory while remaining compliant with ffmpeg licencing requirements.
+    - `Pip`-install the required Python packages (`requests`, `playwright`, `curl_cffi`, etc) into virtual environment.
+    - Install necessary browser binaries.
+    - Prompt for system installation of `jq` and `deno`.
 
 ## Usage
 
@@ -67,8 +78,8 @@ You do **not** need to activate the virtual environment manually. The scripts ar
 ```
 ## Feedback
 
-Thanks for using and feedback is welcome.
+Thanks for using and feedback is very welcome.
 
 ## License
 
-MIT License.
+GNU GPLv3+
