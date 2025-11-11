@@ -34,13 +34,12 @@ else
 fi
 
 # --- URL INPUT MODIFICATION ---
-# Check if the URL ends with a "+" for the prompt menu
 prompt_menu_requested=false
 printf "Enter URL for download. Append \"+\" for prompt menu. Confirm with Enter: "
 read -r url_input
 if [[ "$url_input" == *+ ]]; then
     prompt_menu_requested=true
-    url="${url_input%+}" # Remove the trailing '+'
+    url="${url_input%+}"
 else
     url="$url_input"
 fi
@@ -52,7 +51,6 @@ fi
 
 # --- INTERACTIVE PROMPT SELECTION MENU ---
 
-# Initialize prompt variables to be empty
 llm_instructions_json=""
 if [ "$prompt_menu_requested" = true ]; then
     # Styling
@@ -75,7 +73,7 @@ if [ "$prompt_menu_requested" = true ]; then
         "TASK|Comment Sentiment Analysis|Analyze the sentiment of the comments section. Identify the dominant emotional tones, categorize the top 3-5 recurring themes or arguments, and note any significant shifts in opinion or common points of confusion."
         "TASK|Deconstruct Core Argument|Identify the primary thesis of the video. Sequentially list the main arguments or claims made in support of this thesis. For each argument, note the evidence or reasoning provided in the transcript."
         "TASK|Extract Actionable Items|Scan the transcript and comments for any concrete advice, recommended actions, tools, resources, or unresolved questions. Collate these into a structured list."
-        "CUSTOM|Enter Custom Prompt|-"
+        "CUSTOM|Custom Prompt|-"
     )
 
     # State variables
@@ -90,7 +88,6 @@ if [ "$prompt_menu_requested" = true ]; then
         clear
         echo -e "${B_WHITE}--- Configure LLM Instructions ---${NC}"
 
-        # Display current selections
         echo -e "${B_YELLOW}Current Selections:${NC}"
         [ -n "$selected_formatting_name" ] && echo -e "  ${CYAN}Format:${NC} $selected_formatting_name"
         [ -n "$selected_tone_name" ] && echo -e "  ${CYAN}Tone:${NC} $selected_tone_name"
@@ -100,7 +97,6 @@ if [ "$prompt_menu_requested" = true ]; then
         fi
         [ -n "$custom_prompt" ] && echo -e "  ${CYAN}Custom Prompt:${NC} [Present]"
         echo ""
-        # Display menu options
         i=1
         for item in "${menu_items[@]}"; do
             IFS='|' read -r category name _ <<< "$item"
@@ -161,19 +157,40 @@ if [ "$prompt_menu_requested" = true ]; then
         esac
     done
 
-    # --- ASSEMBLE LLM INSTRUCTIONS (MODIFIED) ---
+    # --- ASSEMBLE LLM INSTRUCTIONS (MODIFIED FOR NEW FORMAT) ---
     echo "[yt-menu] -----------------------------------------------------"
-    echo "[yt-menu] Assembling LLM instructions..."
+    echo "[yt-menu] Assembling LLM instructions with new format..."
 
-    tasks_json_array="[]"
-    if [ ${#selected_tasks[@]} -gt 0 ]; then
-        tasks_json_array=$(jq -n '[$ARGS.positional]' --args "${!selected_tasks[@]}")
+    # 1. Format the single-selection prompts (Format and Tone)
+    formatted_format_prompt=""
+    if [ -n "$selected_formatting_name" ]; then
+        formatted_format_prompt=" * ${selected_formatting_name}: ${selected_formatting_prompt}"
     fi
 
-    # Use jq to construct the final instructions object with the new key names.
+    formatted_tone_prompt=""
+    if [ -n "$selected_tone_name" ]; then
+        formatted_tone_prompt=" * ${selected_tone_name}: ${selected_tone_prompt}"
+    fi
+
+    # 2. Format the multi-selection prompts (Tasks) and build a JSON array
+    tasks_json_array="[]"
+    if [ ${#selected_tasks[@]} -gt 0 ]; then
+        formatted_task_prompts_for_jq=()
+        for name in "${!selected_tasks[@]}"; do
+            prompt="${selected_tasks[$name]}"
+            formatted_string=" * ${name}: ${prompt}"
+            # Add the formatted string to a temporary bash array
+            formatted_task_prompts_for_jq+=("$formatted_string")
+        done
+        # Use jq to safely convert the bash array into a JSON array string
+        tasks_json_array=$(jq -n --compact-output '[$ARGS.positional]' --args "${formatted_task_prompts_for_jq[@]}")
+    fi
+
+    # 3. Use jq to construct the final instructions object from the newly formatted shell variables.
+    #    The custom prompt is used as-is.
     llm_instructions_json=$(jq -n \
-        --arg format "$selected_formatting_prompt" \
-        --arg tone "$selected_tone_prompt" \
+        --arg format "$formatted_format_prompt" \
+        --arg tone "$formatted_tone_prompt" \
         --argjson tasks "$tasks_json_array" \
         --arg custom "$custom_prompt" \
         '{
@@ -308,7 +325,7 @@ if [ -n "$best_sub_file" ]; then
 fi
 echo "[yt-menu] -----------------------------------------------------"
 
-# --- AGGREGATE FINAL LLM PACKAGE (MODIFIED) ---
+# --- AGGREGATE FINAL LLM PACKAGE ---
 echo "[yt-menu] Aggregating all data into a final LLM JSON package..."
 package_basename=$(basename "${base_filename}.llm-package.json")
 temp_package_path="$tmp_dir/$package_basename"
@@ -316,7 +333,7 @@ temp_package_path="$tmp_dir/$package_basename"
 jq_command_args=()
 jq_filter_parts=()
 
-# 1. Conditionally add START instructions. We will add the END instructions later.
+# 1. Conditionally add START instructions.
 if [ -n "$llm_instructions_json" ]; then
     jq_command_args+=(--argjson instructions "$llm_instructions_json")
     jq_filter_parts+=('"llm_instructions_start": $instructions')
@@ -345,15 +362,10 @@ fi
 
 # FINAL JQ EXECUTION
 if [ ${#jq_filter_parts[@]} -gt 0 ]; then
-    # 4. Join all parts into the base object filter.
     base_jq_filter="{$(IFS=,; echo "${jq_filter_parts[*]}")}"
     final_jq_filter="$base_jq_filter"
 
-    # 5. Conditionally build the final, multi-stage filter.
     if [ -n "$llm_instructions_json" ]; then
-        # Stage 1: Create the base object (done above).
-        # Stage 2: Reorder to ensure 'llm_instructions_start' and 'metadata' are at the top.
-        # Stage 3: Merge a new object containing 'llm_instructions_end' at the very end.
         final_jq_filter="$base_jq_filter | {llm_instructions_start, metadata} + . | . + {llm_instructions_end: \$instructions}"
     fi
 
