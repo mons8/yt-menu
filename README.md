@@ -7,15 +7,23 @@
     - albums
     - songs
     - entire channels (for albums)
+- `llm-package` outputs an elaborate, token concious .json package of metadata and custom prompts
 - metadata
     - transcription
     - description
     - comments (original output or readably processed & minimized)
-    - all of the above in a minimized (token conscious) .json package for llm prompting. 
 
 It manages its own up-to-date copies of `yt-dlp` and `FFmpeg` and handles Python dependencies in `venv` without polluting the user's global system.
 
-<img width="868" height="249" alt="20251106_104838" src="https://github.com/user-attachments/assets/472f4fcb-e6e1-4a23-b124-5ae75326cf7e" />
+
+-----------------------------------
+<img width="898" height="233" alt="20251111_132323" src="https://github.com/user-attachments/assets/1170bea7-3e5a-4f0c-964a-f118003b09b3" />
+
+_Main menu_
+
+<img width="898" height="347" alt="20251111_132417" src="https://github.com/user-attachments/assets/2b39cab1-e4a0-4780-a9e0-f07bf98d787f" />
+
+_Optional prompt insertion_
 
 ## Features
 
