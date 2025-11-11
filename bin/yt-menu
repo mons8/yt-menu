@@ -44,15 +44,6 @@ B_RED='\e[1;31m'
 B_GREEN='\e[1;32m'
 B_YELLOW='\e[1;33m'
 B_WHITE='\e[1;37m'
-# Box-drawing characters
-BOX_V="│" # Vertical
-BOX_H="─" # Horizontal
-BOX_TL="┌" # Top-Left
-BOX_TR="┐" # Top-Right
-BOX_BL="└" # Bottom-Left
-BOX_BR="┘" # Bottom-Right
-# -------------
-
 
 # =============================================================================
 # --- MENU CONFIGURATION ---
@@ -68,7 +59,7 @@ menu_items=(
     "$B_GREEN|Normal yt-dlp|$B_WHITE|defaults (likely video)|$WORK_DIR/libexec/yt-regular.sh"
     "$WHITE|Comments, transcription and description|$B_WHITE|json, srt, text|$WORK_DIR/libexec/yt-comments.sh"
     "$WHITE|Transcription and description|$B_WHITE|srt, text|$WORK_DIR/libexec/subs.sh"
-    "$B_WHITE|LLM Ingest${NC} - Minimized comments, transcription and description in one vehicle|$B_WHITE|json|$WORK_DIR/libexec/vehicle.sh"
+    "$B_WHITE|llm-package${NC} - Minimized comments, transcription and description in one vehicle|$B_WHITE|json|$WORK_DIR/libexec/vehicle.sh"
     "$B_YELLOW|Edit yt-dlp defaults file|||$WORK_DIR/libexec/yt-config_edit.sh"
     "$B_RED|Exit|||EXIT"
 )
