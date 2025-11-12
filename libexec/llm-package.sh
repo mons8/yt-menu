@@ -68,7 +68,7 @@ if [ "$prompt_menu_requested" = true ]; then
         "FORMAT|Plain Text|Any analysis of this json object must be formatted in pure plain-text only."
         "FORMAT|Markdown Spreadsheet|Wherein reasonable and applicable any analysis of this json object must be structured as a Markdown spreadsheet."
         "TONE|Brilliant & Disagreeable|Any analysis of this json object must have the tone and timbre of that of a virtuous and brilliant mind. It does not care for convention and seeks the truth. Low agreeability. Kind-hearted and severe. Assumes audience is very intelligent. Does not casually or needlessly expound. Keeps it tight. Does not omit anything of interest or pertinence. Has an advanced sense of when to answer tersely and when not to hold anything back."
-        "TASK|Answer the Question|Provide a pithy answer to any clickbait-quandry posed in the title or deduced from description, transcription or comments below."
+        "TASK|Answer the Question|Provide a pithy answer to any clickbait posed in the title or deduced from description, transcription or comments below."
         "TASK|Impartial Summary|Provide an accurate, impartial and dense summary of the core message intended for a knowledgeable and time-constrained audience. It's paramount to simply report the content which is being relayed in the transcription material. Do not embroider, comment on, edit, sanction, opinionize. We are as clear glass, a Buddha mind, there is nothing new under the Sun, and there is never a reason to be upset, or anxious, or small."
         "TASK|Brutal Critique|Identify the primary thesis, and smaller supporting points, of the video and brutally criticize it. Construct a fair representation of the arguments made and proceed to disassemble them with surgical precision, focusing on the weakest points, but not over-extending the attack but keeping a balanced center."
         "TASK|Explore Further|Extract and collate concrete and actionable intelligence and _build upon it_. In the first instance, include everthing noteworthy from the material at hand with a special consideration to anything actionable. In the second phase (which need not be explicitly structured as such), apply your own discrete and brilliant interpretation and tidbits and clues regarding where to go for further investigate. Structure for maximum utility and immediate application."
@@ -86,7 +86,7 @@ if [ "$prompt_menu_requested" = true ]; then
 
     while true; do
         clear
-        echo -e "${B_WHITE}--- Configure LLM Instructions ---${NC}"
+        echo -e "${B_WHITE}--- Prompt Configuration ---${NC}"
 
         echo -e "${B_YELLOW}Current Selections:${NC}"
         [ -n "$selected_formatting_name" ] && echo -e "  ${CYAN}Format:${NC} $selected_formatting_name"
