@@ -1,0 +1,5 @@
+{
+  "key": "high-priority-instruction",
+  "type": "single",
+  "special": "interactive"
+}

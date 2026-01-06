@@ -96,6 +96,7 @@ YT_DLP_ARGS=(
     --replace-in-metadata "title" " \(Audio\)" ""
     --replace-in-metadata "title" " \(Video\)" ""
     --embed-metadata
+    --remote-components ejs:github
 )
 
 
