@@ -22,7 +22,7 @@ _Prompt Configuration_
 
 
 ### `llm-package`, AI-Context Pipeline 
-_(Option 7. -> Enter URL and **append  `+`** to access the menu)_
+_(Option 7. -> Enter URL and **append <kbd>+</kbd>** (e.g. `https://domain.com/video-url+`) to access the menu_
 
 Turn a streaming video into a "knowledge packet" for AI analysis.
 
