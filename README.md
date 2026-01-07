@@ -22,41 +22,50 @@ _Prompt Injection_
 
 
 ### `llm-package`, AI-Context Pipeline 
-_(Option 7. -> Enter URL and **append <kbd>+</kbd>** (e.g. `https://domain.com/video-url+`) to access the menu._
 
-Turn a streaming video, its comments and metadata, into a `knowledge packet` for AI analysis.
+```
+Select Option: 7 - llm-package
+```
 
+Enter URL and **append <kbd>+</kbd>** to the end to access the menu.
+```
+e.g. https://domain.com/video-url+
+```
+
+
+*   **Utility:** Turns a video, comments & metadata into a **knowledge packet** for AI analysis.
 *   **Token Conscious:** The output is a single, minimized `.json` file ready to be pasted into a chat window or used for RAG (Retrieval-Augmented Generation).
 *   **Clipboard:** The final package path (or content) is automatically copied to your clipboard for immediate use.
-*   **Prompt Injection:** A convenient TUI menu allows you to inject modular instructions directly into the payload. Select from categories like **TASK** ("Summarize", "Answer the Clickbait!"), **FORMAT** ("Markdown Spreadsheet"), or **TONE**. It also features a **CUSTOM** interactive mode for ad-hoc prompting. Your choices are then injected directly into the final JSON payload. 
+*   **Prompt Injection:** A convenient TUI menu allows you to inject modular instructions directly into the payload. Your choices are then injected directly into the final JSON payload. 
 	*   *Fully Extensible:* The menu is built dynamically from the `prompts/` directory. You can add or edit categories and prompts by creating folders and files.
-*   **Rich Payload:** In addition to `prompts` and `metadata`, the JSON package contains:
-    *   **`Transcription:`** Auto-selects the best available subtitle (prioritizing human-written and native language) and processes it for readability. **Processes** subtitles into readable and token sensitive transcriptions.
-    *   **`Comments:`** Restructures flat YouTube comment dumps into human-and-AI-readable conversation threads for analysis and public reception context. This process prunes out _a lot_ of unnedeed and detrimental tokens from the API output.
+    *   *Interactive Mode:* Select <kbd>Custom</kbd> to type ad-hoc instructions on the fly.
+	*   *Flexible Downloads:* Toggle <kbd>o</kbd> in the menu to **omit comments**, downloading only the transcription and metadata to save bandwidth and tokens.
+*   **Rich Payload:** In addition to <kbd>prompts</kbd> and <kbd>metadata</kbd>, the `JSON` package contains:
+    *   *<kbd>Transcription:</kbd>* Auto-selects the best available subtitle (prioritizing human-written and native language) and processes it into a readable and token sensitive transcription format.
+    *   *<kbd>Comments:</kbd>* Restructures flat comment dumps into human-and-AI-readable conversation threads for analysis and public reception context. This process prunes out _a lot_ of unneeded and detrimental tokens from the API output.
 
 ### Audio Archival
 Robust and convenient tools for hoarders and archivists.
 *   **Album & Channel Scraping:** Automates the downloading of entire albums or discographies via Channel `/releases` dynamic scraping.
-*   **Metadata Tagging:** Automatically applies sensible ID3 tags and filenaming conventions.
-*   **Split Workflows:** Dedicated modes for Single Songs, Full Albums, or entire Channel Discographies.
+*   **Metadata Tagging:** Automatically applies sensible `ID3` tags and filenaming conventions.
+*   **Split Workflows:** Dedicated modes for <kbd>Songs</kbd>, <kbd>Albums</kbd>, or entire <kbd>Channel Discographies</kbd>.
 *   **Download Directories:** Customize download folders per mode.
 
 ## Key Features
 
--   **Audio Archival** and **context packages** for LLM.
 -   **Menu-Driven TUI:** Streamlined, low-click interactive interface.
 -   **Self-Contained Ecosystem:**
     -   **Isolated Python:** Uses a local `.venv` to manage dependencies (`playwright`, `requests`) without touching your system Python.
     -   **Vendor Management:** Downloads its own local binaries for `yt-dlp` and `ffmpeg` (compliant builds) and other dependencies on install.
 
-## Requirements
+## Global requirements for installation
 
 -   A `bash` shell
 -   `git`
--   `python3` (with `venv` module available)
+-   `python3` (with `venv` and `pip`)
 -   `curl` or `wget`
 -   `tar`
--   `jq` (required for `llm-package` JSON processing)
+-   `jq` (required for `llm-package` `JSON` processing)
 
 ## Installation
 
@@ -89,15 +98,19 @@ The installation process is fully automated.
 ## Project Structure
 
 ```text
-├── .venv/       # Local Python virtual environment (Git-ignored)
-├── bin/         # User-facing executable wrapper
-├── config/      # User-specific configuration (Git-ignored)
-├── data/        # Static assets and templates
-├── lib/         # Shared library scripts (env, config logic)
-├── libexec/     # The heavy-lifting worker scripts (llm-package, yt-album, etc.)
-├── prompts/     # Dynamic prompt definitions for llm-package
-├── vendor/      # Self-contained binaries (yt-dlp, ffmpeg)
-└── install.sh   # Setup script
+├── .venv/                       # Local Python virtual environment (Git-ignored)
+├── bin/                         # User-facing executable wrapper
+├── config/                      # User-specific configuration (Git-ignored)
+├── data/                        # Static assets and templates
+├── ffmpeg_gpl_materials/        # FFMpeg Compliance materials generated at installtime (Git-ignored)
+├── lib/                         # Shared library scripts (env, config logic)
+├── libexec/                     # Main worker scripts (llm-package, yt-album, etc.)
+├── prompts/                     # User-definable llm-package dynamic prompt definitions
+├── vendor/                      # Self-contained binaries (yt-dlp, ffmpeg)
+├── COPYING                      # License
+├── install.sh                   # Setup script
+├── README.md                    # This readme
+└── .gitignore                   # .gitignore
 ```
 
 ## Feedback
