@@ -14,25 +14,25 @@ It manages its own copies of `yt-dlp` and `FFmpeg` and handles Python dependenci
 
 _Main menu_
 
-<img width="809" height="424" alt="20260106_230742" src="https://github.com/user-attachments/assets/6962948a-1993-4ffa-9d71-1def4a95362a" />
+<img width="809" height="493" alt="prompt-injection" src="https://github.com/user-attachments/assets/c1a86478-85b4-4e1e-b413-4f6881429478" />
 
-_Prompt Configuration_
+_Prompt Injection_
 
 ## Core Capabilities
 
 
 ### `llm-package`, AI-Context Pipeline 
-_(Option 7. -> Enter URL and **append <kbd>+</kbd>** (e.g. `https://domain.com/video-url+`) to access the menu_
+_(Option 7. -> Enter URL and **append <kbd>+</kbd>** (e.g. `https://domain.com/video-url+`) to access the menu._
 
-Turn a streaming video into a "knowledge packet" for AI analysis.
+Turn a streaming video, its comments and metadata, into a `knowledge packet` for AI analysis.
 
 *   **Token Conscious:** The output is a single, minimized `.json` file ready to be pasted into a chat window or used for RAG (Retrieval-Augmented Generation).
 *   **Clipboard:** The final package path (or content) is automatically copied to your clipboard for immediate use.
 *   **Prompt Injection:** A convenient TUI menu allows you to inject modular instructions directly into the payload. Select from categories like **TASK** ("Summarize", "Answer the Clickbait!"), **FORMAT** ("Markdown Spreadsheet"), or **TONE**. It also features a **CUSTOM** interactive mode for ad-hoc prompting. Your choices are then injected directly into the final JSON payload. 
 	*   *Fully Extensible:* The menu is built dynamically from the `prompts/` directory. You can add or edit categories and prompts by creating folders and files.
-*   **Rich Payload:** In addition to prompts and metadata, the JSON package contains:
-    *   **Transcription:** Auto-selects the best available subtitle (prioritizing human-written and native language) and processes it for readability. **Processes** subtitles into readable and token sensitive transcriptions.
-    *   **Comments:** Restructures flat YouTube comment dumps into human-and-AI-readable conversation threads for sentiment analysis or public reception context.
+*   **Rich Payload:** In addition to `prompts` and `metadata`, the JSON package contains:
+    *   **`Transcription:`** Auto-selects the best available subtitle (prioritizing human-written and native language) and processes it for readability. **Processes** subtitles into readable and token sensitive transcriptions.
+    *   **`Comments:`** Restructures flat YouTube comment dumps into human-and-AI-readable conversation threads for analysis and public reception context. This process prunes out _a lot_ of unnedeed and detrimental tokens from the API output.
 
 ### Audio Archival
 Robust and convenient tools for hoarders and archivists.
