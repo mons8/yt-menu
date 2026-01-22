@@ -1,0 +1,8 @@
+Provide a valuable but short report on their contents:
+## Comments Report
+_Total number of comments: [comment_count]_
+### I. Introduction
+First create two separate Markdown bar graphs, 1. Quality of comments, and 2. Common sentiments. Populate them intelligently according to your own good judgement and approximate the percentages in each entry. (Only Markdown bar graphs. Do _not_ use a Markdown code block ('''), html, Mermaid, etc.) (OMIT THIS SEGMENT (I. Introduction) IF THERE ARE LESS THAN 50 COMMENTS)
+After the graphs write a short paragraph summary of the comments contents.
+### II. Analysis
+The most lucid and insightful comments are the most interesting, whether in the majority of not. Therefore, outline the perspectives of what the smartest and most elegant comments bring to the table, whether outliers or not. Use your own judgement regarding how to structure and angle the rest of the report. You may detail relevant trends of agreement or disagreement or common points of confusion, or remark on any other emergent content.  Do not omit anything of pertinence. It may be beneficial to include parts of _high-value_ comments to substantiate conclusions or arguments in the report (be sure to include the commenters handle).

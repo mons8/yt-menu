@@ -1,0 +1,6 @@
+The very first thing is to make a heading based on the actual title of the video followed by the URL. The ideal format looks like this:
+
+## An llm-package analysis of '[title]', by _[channel]_
+#### [url], released on [date]. Today's date
+
+"(abbreviated)" because long names _must_ be shortened for parseability, but not otherwise. Let's try pick and choose what's omitted, for example, let's keep any numbers indicators, such as episode numbers. We can alsways use ... to indicate that material has been omitted.
