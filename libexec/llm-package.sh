@@ -2,20 +2,35 @@
 
 # --- CONSTANTS & CONFIGURATION ---
 set -o pipefail
+
+# Colors
 NC='\e[0m'
-# Palette for Category rotation
-COLORS=('\e[0;32m' '\e[1;34m' '\e[1;36m' '\e[0;33m' '\e[1;33m' '\e[0;35m' '\e[1;35m' '\e[0;31m' '\e[1;37m')
-# Standard UI Colors
+## Standard UI Colors
 GREEN='\e[0;32m'
 B_WHITE='\e[1;37m'
 YELLOW='\e[0;33m'
 B_BLUE='\e[1;34m'
 CYAN='\e[0;36m'
 RED='\e[0;31m'
+## Palette for Category rotation
+COLORS=('\e[0;32m' '\e[1;34m' '\e[1;36m' '\e[0;33m' '\e[1;33m' '\e[0;35m' '\e[1;35m' '\e[0;31m' '\e[1;37m')
 
-# The directory containing the prompt files, relative to the script
+# Paths
 PROMPT_DIR="$(dirname "$0")/../prompts"
+CONFIG_DIR="$(dirname "$0")/../config"
+MAIN_CONFIG="$CONFIG_DIR/llm-package.cfg"
+STATE_FILE="$CONFIG_DIR/PromptSelection.state"
+CUSTOM_TEXT_FILE="$CONFIG_DIR/CustomPrompt.state"
 
+# --- DATA STRUCTURES ---
+declare -a menu_items
+declare -a silent_includes
+declare -A selected_indices # map: index -> 1
+declare -A assigned_hotkeys # map: char -> 1 (collision detection)
+declare -A category_selections # map: cat_name -> selected_index (for 'single' type enforcement)
+custom_prompt_text=""
+opt_no_sticky=false
+comments_basedir=""
 # Global flag to track if transcription was created
 TRANSCRIPTION_WAS_SKIPPED=false
 
@@ -36,6 +51,71 @@ declare -A category_selections # map: cat_name -> selected_index (for 'single' t
 custom_prompt_text=""
 
 # --- FUNCTIONS ---
+
+# Saves Promt State
+save_prompt_state() {
+    # If sticky prompts are disabled, clear state files and return
+    if [ "$opt_no_sticky" = true ]; then
+        > "$STATE_FILE"
+        > "$CUSTOM_TEXT_FILE"
+        return
+    fi
+
+    # 1. Save Selections (Category|ItemName)
+    : > "$STATE_FILE" # truncate
+    if [ "$omit_comments" = true ]; then echo "SPECIAL|OMIT_COMMENTS" >> "$STATE_FILE"; fi
+
+    for i in "${!selected_indices[@]}"; do
+        IFS='|' read -r _ cat item _ _ _ _ _ <<< "${menu_items[$i]}"
+        echo "${cat}|${item}" >> "$STATE_FILE"
+    done
+
+    # 2. Save Custom Prompt Text
+    echo -n "$custom_prompt_text" > "$CUSTOM_TEXT_FILE"
+}
+
+# Loads Promt State
+load_prompt_state() {
+    # 1. Load Custom Prompt Text
+    if [ -f "$CUSTOM_TEXT_FILE" ]; then
+        custom_prompt_text=$(<"$CUSTOM_TEXT_FILE")
+    fi
+
+    # 2. Load Selections
+    if [ -f "$STATE_FILE" ]; then
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+
+            # Handle Omit Flag
+            if [[ "$line" == "SPECIAL|OMIT_COMMENTS" ]]; then
+                omit_comments=true
+                continue
+            fi
+
+            local stored_cat="${line%%|*}"
+            local stored_item="${line#*|}"
+
+            # Find matching index in menu_items
+            for i in "${!menu_items[@]}"; do
+                IFS='|' read -r _ cat item _ _ select_type _ _ <<< "${menu_items[$i]}"
+                if [[ "$cat" == "$stored_cat" && "$item" == "$stored_item" ]]; then
+                    selected_indices[$i]=1
+                    # Enforce single selection logic tracking
+                    if [[ "$select_type" == "single" ]]; then
+                        category_selections[$cat]=$i
+                    fi
+                    break
+                fi
+            done
+        done < "$STATE_FILE"
+    fi
+}
+
+# Re-writes the config file with current values
+update_config_file() {
+    echo "BASE_DIR=\"$comments_basedir\"" > "$MAIN_CONFIG"
+    echo "OPT_NO_STICKY=\"$opt_no_sticky\"" >> "$MAIN_CONFIG"
+}
 
 # Determines the color based on the directory number prefix
 get_category_color() {
@@ -94,18 +174,25 @@ generate_hotkey() {
 }
 
 # Recursively scans prompts directory
+# Recursively scans prompts directory
 load_menu_items() {
     menu_items=()
     silent_includes=()
     assigned_hotkeys=()
-    
+
+    # --- RESRVE STATIC HOTKEYS ---
+    # Pre-assign keys used for hardcoded menu options to prevent
+    # the dynamic generator from assigning them to prompt files.
+    assigned_hotkeys["o"]=1  # Reserved for Omit
+    assigned_hotkeys["d"]=1  # Reserved for Disable Sticky
+
     # Loop through Category Directories
     while IFS= read -r cat_dir; do
         local cat_dirname=$(basename "$cat_dir")
         local cat_num="${cat_dirname%%-*}"
         local cat_name_raw="${cat_dirname#*-}"
         local cat_name="${cat_name_raw//_/ }"
-        
+
         # Check for 00- prefix (Silent/Global)
         if [[ "$cat_num" == "00" ]]; then
             # Load global silent includes
@@ -125,7 +212,7 @@ load_menu_items() {
         local json_key="misc"
         local select_type="multi"
         local special_flag="none"
-        
+
         if [ -f "$config_file" ]; then
             json_key=$(jq -r '.key // "misc"' "$config_file")
             select_type=$(jq -r '.type // "multi"' "$config_file")
@@ -140,18 +227,19 @@ load_menu_items() {
             # If item filename starts with digits and -, strip it for display, otherwise keep it
             local item_name_clean="${item_filename%.*}" # remove extension
             item_name_clean="${item_name_clean//_/ }"
-            
+
             # Smart Hotkey
             local current_total=${#menu_items[@]}
+            # This function now checks assigned_hotkeys, which already contains 'o' and 'd'
             local hotkey=$(generate_hotkey "$item_name_clean" "$current_total")
             assigned_hotkeys["$hotkey"]=1
 
             # Store absolute path
             local file_path=$(realpath "$file")
-            
+
             # Format: hotkey|cat_name|item_name|file_path|json_key|select_type|special_flag|color_code
             menu_items+=("$hotkey|$cat_name|$item_name_clean|$file_path|$json_key|$select_type|$special_flag|$cat_color")
-            
+
         done < <(find "$cat_dir" -type f ! -name "category.json" ! -name ".*" | sort)
 
     done < <(find "$PROMPT_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
@@ -159,44 +247,47 @@ load_menu_items() {
 
 display_menu() {
     clear
-    echo -e "\n${B_WHITE}--- Prompt Configuration ---${NC}\n"
-    # Added instructional text
-    echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in /prompts/\n"
+    echo -e "\n${B_WHITE}--- Prompt Injection ---${NC}\n"
+    echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in prompts/\n"
+
     # 1. Print Selections
     echo -e "${YELLOW}Current Selections:${NC}"
     local has_selections=false
-    
-    # Sort indices for display
     local sorted_indices=$(for i in "${!selected_indices[@]}"; do echo "$i"; done | sort -n)
-    
+
     for i in $sorted_indices; do
         IFS='|' read -r _ cat item _ _ _ special color <<< "${menu_items[$i]}"
         echo -e "  ${color}${cat}:${NC} $item"
+        # Show preview of custom text if active
+        if [[ "$special" == "interactive" ]]; then
+            # Truncate for display if too long
+            local preview="${custom_prompt_text%%$'\n'*}"
+            if [ ${#preview} -gt 60 ]; then preview="${preview:0:57}..."; fi
+            echo -e "      ${B_WHITE}\"$preview\"${NC}"
+        fi
         has_selections=true
     done
     [[ "$has_selections" == false ]] && echo "  None"
     echo ""
 
     # 2. Print Menu Options
-    local last_cat=""
     for i in "${!menu_items[@]}"; do
         IFS='|' read -r hotkey cat item _ _ _ special color <<< "${menu_items[$i]}"
-        
-        # Determine status marker
         local status="[ ]"
         [[ -v "selected_indices[$i]" ]] && status="[${GREEN}x${NC}]"
-        
-        # Visual separator for categories (optional, but clean)
-        # if [[ "$cat" != "$last_cat" && "$last_cat" != "" ]]; then echo ""; fi
-        # last_cat="$cat"
-
         printf " %s %b ${color}[%-8s]${NC} | %s\n" "$hotkey." "$status" "$cat" "$item"
     done
-    # Omit Option
+
+    # Global Options
     local omit_status="[ ]"
     [[ "$omit_comments" == true ]] && omit_status="[${GREEN}x${NC}]"
+
+    local sticky_status="[ ]"
+    [[ "$opt_no_sticky" == true ]] && sticky_status="[${GREEN}x${NC}]"
+
     echo ""
     printf " %s %b %b\n" "o." "$omit_status" "${B_WHITE}Omit downloading comments.${NC}"
+    printf " %s %b %b\n" "d." "$sticky_status" "${B_WHITE}Disable Sticky Prompts.${NC}"
 
     echo -e "\n${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} When Done${NC}\n"
 }
@@ -247,20 +338,27 @@ assemble_prompt_payload() {
 
 # --- SCRIPT BODY ---
 
-# --- Configuration & URL Input ---
-config_file="$WORK_DIR/config/yt-comments.cfg"
-comments_basedir=""
-if [ -f "$config_file" ] && [ -r "$config_file" ]; then read -r comments_basedir < "$config_file"; fi
+# --- 1. Load Configuration (llm-package.cfg) ---
+if [ ! -d "$CONFIG_DIR" ]; then mkdir -p "$CONFIG_DIR"; fi
+
+if [ -f "$MAIN_CONFIG" ]; then
+    source "$MAIN_CONFIG"
+    # Map raw vars to script vars if needed, though sourcing handles BASE_DIR and OPT_NO_STICKY
+    comments_basedir="$BASE_DIR"
+    opt_no_sticky="${OPT_NO_STICKY:-false}"
+fi
+
+# Ensure Download Directory Exists
 if [ -z "$comments_basedir" ]; then
     if [ -t 0 ]; then
-        echo "[yt-menu] Config file ($config_file) not found or base directory not set."
+        echo "[yt-menu] Config ($MAIN_CONFIG) missing or BASE_DIR not set."
         while [ -z "$comments_basedir" ]; do
-            printf "Enter your desired base download dir for comments: "
+            printf "Enter your desired base download dir for llm-packages: "
             read -r comments_basedir
-            if [ -z "$comments_basedir" ]; then echo "[yt-menu] Path cannot be empty. Please try again."; fi
+            if [ -z "$comments_basedir" ]; then echo "[yt-menu] Path cannot be empty."; fi
         done
-        echo "$comments_basedir" > "$config_file"
-        echo "[yt-menu] Comments Base Directory set to: $comments_basedir"
+        update_config_file # Save immediately
+        echo "[yt-menu] Configuration saved."
     else
         echo "[yt-menu] Error: Base directory not configured. Exit." >&2; exit 1
     fi
@@ -268,75 +366,100 @@ else
     echo "[yt-menu] Using base directory: $comments_basedir"
 fi
 
-# --- URL Input Modification ---
+# --- 2. Pre-Load Prompts & State ---
+# We load items now so we can restore sticky state before the URL prompt
+load_menu_items
+if [ "$opt_no_sticky" = false ]; then
+    load_prompt_state
+fi
+
+# --- 3. URL Input with Context ---
+echo "[yt-menu] -----------------------------------------------------"
+echo -e "${YELLOW}Active Prompts:${NC}"
+has_active_prompts=false
+for i in "${!selected_indices[@]}"; do
+    IFS='|' read -r _ cat item _ _ _ _ color <<< "${menu_items[$i]}"
+    echo -e "  ${color}${cat}:${NC} $item"
+    has_active_prompts=true
+done
+if [ "$has_active_prompts" = false ]; then echo "  (None)"; fi
+if [ "$omit_comments" = true ]; then echo -e "  ${RED}[Omit Comments]${NC}"; fi
+echo ""
+
 prompt_menu_requested=false
 printf "%b" "${B_WHITE}Enter URL${NC} (append ${B_BLUE}\"+\"${NC} for prompt menu)${B_WHITE}:${NC} "
 read -r url_input
+
 if [[ "$url_input" == *+ ]]; then prompt_menu_requested=true; url="${url_input%+}"; else url="$url_input"; fi
 if [ -z "$url" ]; then echo "[yt-menu] Error: URL cannot be empty." >&2; exit 1; fi
 
-# --- INTERACTIVE PROMPT SELECTION MENU ---
-llm_instructions_json=""
-# Default behavior flags
-omit_comments=false
+# --- 4. Interactive Menu Loop ---
 if [ "$prompt_menu_requested" = true ]; then
-    load_menu_items
-    
+
     while true; do
         display_menu
         printf "${B_WHITE}Choice: ${NC}"
-        # || break ensures we exit if stdin closes (prevents 100% CPU loop on disconnect)
         read -r -n 1 input_char || break
-        echo "" # newline
-        
+        echo ""
+
         if [[ "$input_char" == "+" ]]; then break; fi
 
-        #"Omit" menu option logic
+        # Toggle Omit
         if [[ "$input_char" == "o" || "$input_char" == "O" ]]; then
             if [[ "$omit_comments" == true ]]; then omit_comments=false; else omit_comments=true; fi
             continue
         fi
-        # Find index matching hotkey (case insensitive)
+
+        # Toggle Sticky (Disable)
+        if [[ "$input_char" == "d" || "$input_char" == "D" ]]; then
+            if [[ "$opt_no_sticky" == true ]]; then opt_no_sticky=false; else opt_no_sticky=true; fi
+            # Update config immediately regarding the preference
+            update_config_file
+            continue
+        fi
+
+        # Standard Items Logic
         target_index=-1
         for i in "${!menu_items[@]}"; do
             IFS='|' read -r hk _ _ _ _ _ _ _ <<< "${menu_items[$i]}"
-            if [[ "${hk,,}" == "${input_char,,}" ]]; then
-                target_index=$i
-                break
-            fi
+            if [[ "${hk,,}" == "${input_char,,}" ]]; then target_index=$i; break; fi
         done
 
         if [ "$target_index" -ne -1 ]; then
             IFS='|' read -r _ cat _ _ _ select_type special _ <<< "${menu_items[$target_index]}"
-            
-            # Handle Interactive/Custom Special Flag
+
+            # Interactive Special Flag
             if [[ "$special" == "interactive" ]]; then
-                # If unselecting, just clear it
                 if [[ -v "selected_indices[$target_index]" ]]; then
                     unset "selected_indices[$target_index]"
-                    custom_prompt_text=""
+                    # Don't clear text immediately in case of accidental toggle,
+                    # but maybe we should? The prompt implies state saving text.
+                    # We will keep text in memory but unselect the item.
                 else
                     echo -e "\n${B_WHITE}Enter custom prompt (End with 'EOF' on new line):${NC}"
+                    # If previous text exists, show it (optional, but good UX)
+                    if [ -n "$custom_prompt_text" ]; then echo -e "${CYAN}Current:${NC} $custom_prompt_text"; fi
+
                     line=""; buffer=""
                     while IFS= read -r line; do [[ "$line" == "EOF" ]] && break; buffer+="${line}"$'\n'; done
-                    custom_prompt_text="${buffer%$'\n'}"
-                    # Only mark selected if text provided (ignore empty/whitespace only)
+
+                    # Only update text if user typed something (excluding EOF).
+                    # If empty, keep old text? No, assume replace.
+                    if [ -n "${buffer%$'\n'}" ]; then
+                         custom_prompt_text="${buffer%$'\n'}"
+                    fi
+
                     if [[ -n "${custom_prompt_text//[[:space:]]/}" ]]; then
                         selected_indices[$target_index]=1
                     fi
                 fi
             else
-                # Toggle Selection
+                # Toggle Normal Selection
                 if [[ -v "selected_indices[$target_index]" ]]; then
                     unset "selected_indices[$target_index]"
-                    # If it was the active selection for a 'single' category, clear that tracker
-                    if [[ "${category_selections[$cat]}" == "$target_index" ]]; then
-                        unset "category_selections[$cat]"
-                    fi
+                    if [[ "${category_selections[$cat]}" == "$target_index" ]]; then unset "category_selections[$cat]"; fi
                 else
-                    # Handle "Single" type exclusivity
                     if [[ "$select_type" == "single" ]]; then
-                        # If another item in this category is selected, unselect it
                         if [[ -v "category_selections[$cat]" ]]; then
                             old_idx="${category_selections[$cat]}"
                             unset "selected_indices[$old_idx]"
@@ -348,17 +471,24 @@ if [ "$prompt_menu_requested" = true ]; then
             fi
         fi
     done
+fi
 
-    echo -e "\n[yt-menu] -----------------------------------------------------"
-    echo "[yt-menu] Assembling dynamic LLM payload..."
-    llm_instructions_json=$(assemble_prompt_payload)
-    
-    if [ -z "$llm_instructions_json" ] || [ "$llm_instructions_json" == "{}" ]; then
-        echo "[yt-menu] No instructions selected (and no global includes found)."
-        llm_instructions_json=""
-    else
-        echo "[yt-menu] Instructions assembled successfully."
-    fi
+# --- 5. Finalize State & Assemble ---
+# Save state if sticky is enabled (regardless if menu was requested or not,
+# though usually changes only happen in menu. But 'D' might have changed via config manually)
+save_prompt_state
+
+echo -e "\n[yt-menu] -----------------------------------------------------"
+echo "[yt-menu] Assembling dynamic LLM payload..."
+
+# Payload assemblage using either defaults or menu choices
+llm_instructions_json=$(assemble_prompt_payload)
+
+if [ -z "$llm_instructions_json" ] || [ "$llm_instructions_json" == "{}" ]; then
+    echo "[yt-menu] No instructions selected (and no global includes found)."
+    llm_instructions_json=""
+else
+    echo "[yt-menu] Instructions assembled successfully."
 fi
 
 # --- END OF MENU ---
@@ -383,12 +513,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# --- DOWNLOAD ASSETS ---
+# --- PHASE 1: DOWNLOAD ASSETS ---
 echo "[yt-menu] -----------------------------------------------------"
 echo "[yt-menu] Phase 1: Downloading metadata & comments..."
-declare -a dl_cmd=("${YTDLP_COMMAND_ARRAY[@]}")
+declare -a dl_cmd=("${YTDLP_COMMAND_ARRAY[@]}" --no-playlist)
 if [ "$omit_comments" = false ]; then dl_cmd+=(--extractor-args "youtube:comment_sort=top" --write-comments); fi
-dl_cmd+=(--write-info-json --write-description --skip-download --ignore-config --paths "$tmp_dir" --output "%(channel)s - %(title)s [%(id)s].%(upload_date)s.%(ext)s" "$url")
+dl_cmd+=( --no-playlist --write-info-json --write-description --skip-download --ignore-config --paths "$tmp_dir" --output "%(channel)s - %(title)s [%(id)s].%(upload_date)s.%(ext)s" "$url")
 "${dl_cmd[@]}"
 if [ $? -ne 0 ]; then echo "[yt-menu] Error: yt-dlp failed. Aborting." >&2; exit 1; fi
 
@@ -421,7 +551,7 @@ if [ ${#available_sub_langs[@]} -gt 0 ]; then
 
     if [ -n "$best_lang_to_download" ]; then
         echo "[yt-menu]   -> Downloading subtitle: $best_lang_to_download"
-        "${YTDLP_COMMAND_ARRAY[@]}" --write-subs --write-auto-subs --sub-lang "$best_lang_to_download" --sub-format "srt/ass/best" --skip-download --ignore-errors --ignore-config --paths "$tmp_dir" --output "%(channel)s - %(title)s [%(id)s].%(upload_date)s.%(ext)s" "$url"
+        "${YTDLP_COMMAND_ARRAY[@]}" --no-playlist --write-subs --write-auto-subs --sub-lang "$best_lang_to_download" --sub-format "srt/ass/best" --skip-download --ignore-errors --ignore-config --paths "$tmp_dir" --output "%(channel)s - %(title)s [%(id)s].%(upload_date)s.%(ext)s" "$url"
     fi
 fi
 
@@ -432,7 +562,13 @@ channel_and_title_part="${fname_no_path%% \[*}"
 video_id="${id_and_date_part%%\]*}"; upload_date="${id_and_date_part##*.}"
 channel="${channel_and_title_part%% - *}"; video_title="${channel_and_title_part#* - }"
 video_url="https://www.youtube.com/watch?v=${video_id}"
-
+#  - COUNTING COMMENTS -
+if [ "$omit_comments" = false ]; then
+    # Count the number of items in the 'comments' array
+    comment_count=$(jq -r '(.comments | length) // 0' "$info_json_file")
+else
+    comment_count="Omitted"
+fi
 # --- COMMENTS RESTRUCTURING ---
 threaded_comments_file=""
 if [ "$omit_comments" = false ]; then
@@ -466,8 +602,8 @@ echo "[yt-menu] Creating final package..."
 package_basename=$(basename "${base_filename}.llm-package.json")
 temp_package_path="$tmp_dir/$package_basename"
 
-jq_args=(--arg title "$video_title" --arg channel "$channel" --arg url "$video_url")
-jq_filter='{metadata: {title: $title, channel: $channel, url: $url}}'
+jq_args=(--arg title "$video_title" --arg channel "$channel" --arg url "$video_url" --arg cc "$comment_count")
+jq_filter='{metadata: {title: $title, channel: $channel, url: $url, comment_count: $cc}}'
 
 # Inject Instructions
 if [ -n "$llm_instructions_json" ]; then
@@ -499,7 +635,7 @@ if [ -s "$temp_package_path" ]; then
     final_dest="$comments_basedir/$package_basename"
     mv "$temp_package_path" "$final_dest"
     echo "[yt-menu] Package saved to: $final_dest"
-    
+
     # Clipboard
     abs_path=$(realpath "$final_dest")
     if command -v wl-copy &> /dev/null; then echo "file://${abs_path}" | wl-copy --type text/uri-list
