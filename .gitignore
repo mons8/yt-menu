@@ -33,4 +33,5 @@ FFMPEG_GPL_MATERIALS/
 ffmpeg_gpl_materials/
 ffmpeg-archive.tar.xz
 
-prompts creation.sh
+# helper scripts
+helper_scripts/

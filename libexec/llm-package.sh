@@ -10,6 +10,7 @@ GREEN='\e[0;32m'
 B_WHITE='\e[1;37m'
 YELLOW='\e[0;33m'
 B_BLUE='\e[1;34m'
+BLUE='\e[0;34m'
 CYAN='\e[0;36m'
 RED='\e[0;31m'
 ## Palette for Category rotation
@@ -248,7 +249,7 @@ load_menu_items() {
 display_menu() {
     clear
     echo -e "\n${B_WHITE}--- Prompt Injection ---${NC}\n"
-    echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in prompts/\n"
+    echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/\n"
 
     # 1. Print Selections
     echo -e "${YELLOW}Current Selections:${NC}"
@@ -363,7 +364,7 @@ if [ -z "$comments_basedir" ]; then
         echo "[yt-menu] Error: Base directory not configured. Exit." >&2; exit 1
     fi
 else
-    echo "[yt-menu] Using base directory: $comments_basedir"
+    echo -e "Using base directory: ${BLUE}$comments_basedir${NC}"
 fi
 
 # --- 2. Pre-Load Prompts & State ---
@@ -374,8 +375,8 @@ if [ "$opt_no_sticky" = false ]; then
 fi
 
 # --- 3. URL Input with Context ---
-echo "[yt-menu] -----------------------------------------------------"
-echo -e "${YELLOW}Active Prompts:${NC}"
+echo -e "\n${B_WHITE}--- Enter URL for llm-package ---${NC}\n"
+echo -e "${B_BLUE}Sticky Prompts:${NC}"
 has_active_prompts=false
 for i in "${!selected_indices[@]}"; do
     IFS='|' read -r _ cat item _ _ _ _ color <<< "${menu_items[$i]}"
@@ -387,7 +388,7 @@ if [ "$omit_comments" = true ]; then echo -e "  ${RED}[Omit Comments]${NC}"; fi
 echo ""
 
 prompt_menu_requested=false
-printf "%b" "${B_WHITE}Enter URL${NC} (append ${B_BLUE}\"+\"${NC} for prompt menu)${B_WHITE}:${NC} "
+printf "%b" "${B_WHITE}Enter URL${NC} (Append ${B_BLUE}\"+\"${NC} to enter menu, i.e. http://url.com/url${B_BLUE}+${NC})${B_WHITE}:${NC} "
 read -r url_input
 
 if [[ "$url_input" == *+ ]]; then prompt_menu_requested=true; url="${url_input%+}"; else url="$url_input"; fi
@@ -602,10 +603,10 @@ echo "[yt-menu] Creating final package..."
 package_basename=$(basename "${base_filename}.llm-package.json")
 temp_package_path="$tmp_dir/$package_basename"
 
-jq_args=(--arg title "$video_title" --arg channel "$channel" --arg url "$video_url" --arg cc "$comment_count")
+jq_args=(--arg title "$video_title" --arg channel "$channel" --arg url "$url" --arg cc "$comment_count")
 jq_filter='{metadata: {title: $title, channel: $channel, url: $url, comment_count: $cc}}'
 
-# Inject Instructions
+# Inject Instructions (Prepend)
 if [ -n "$llm_instructions_json" ]; then
     jq_args+=(--argjson inst "$llm_instructions_json")
     jq_filter='{llm_instructions: $inst} + '"$jq_filter"
@@ -627,6 +628,12 @@ fi
 if [ -n "$threaded_comments_file" ]; then
     jq_args+=(--slurpfile comms "$threaded_comments_file")
     jq_filter="$jq_filter"' + {comments: $comms[0]}'
+fi
+
+# Inject Instructions (Prepend and append)
+if [ -n "$llm_instructions_json" ]; then
+    # We reuse the $inst variable defined in the prepend block
+    jq_filter="$jq_filter"' + {llm_reminder: $inst}'
 fi
 
 jq -n "${jq_args[@]}" "$jq_filter" > "$temp_package_path"
