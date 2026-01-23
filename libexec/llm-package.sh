@@ -13,6 +13,7 @@ B_BLUE='\e[1;34m'
 BLUE='\e[0;34m'
 CYAN='\e[0;36m'
 RED='\e[0;31m'
+B_RED='\e[1;31m'
 ## Palette for Category rotation
 COLORS=('\e[0;32m' '\e[1;34m' '\e[1;36m' '\e[0;33m' '\e[1;33m' '\e[0;35m' '\e[1;35m' '\e[0;31m' '\e[1;37m')
 
@@ -31,6 +32,7 @@ declare -A assigned_hotkeys # map: char -> 1 (collision detection)
 declare -A category_selections # map: cat_name -> selected_index (for 'single' type enforcement)
 custom_prompt_text=""
 opt_no_sticky=false
+omit_comments=false
 comments_basedir=""
 # Global flag to track if transcription was created
 TRANSCRIPTION_WAS_SKIPPED=false
@@ -400,7 +402,7 @@ for i in $sorted_active_indices; do
 done
 
 if [ "$has_active_prompts" = false ]; then echo "  (None)"; fi
-if [ "$omit_comments" = true ]; then echo -e "  ${RED}[Omit Comments]${NC}"; fi
+if [ "$omit_comments" = true ]; then echo -e "  ${B_RED}[Comments Omitted]${NC}"; fi
 echo ""
 
 prompt_menu_requested=false
@@ -646,10 +648,10 @@ if [ -n "$threaded_comments_file" ]; then
     jq_filter="$jq_filter"' + {comments: $comms[0]}'
 fi
 
-# Inject Instructions (Prepend and append)
+# Inject Instructions (Append)
 if [ -n "$llm_instructions_json" ]; then
     # We reuse the $inst variable defined in the prepend block
-    jq_filter="$jq_filter"' + {llm_reminder: $inst}'
+    jq_filter="$jq_filter"' + {llm_instructions_reminder: $inst}'
 fi
 
 jq -n "${jq_args[@]}" "$jq_filter" > "$temp_package_path"
