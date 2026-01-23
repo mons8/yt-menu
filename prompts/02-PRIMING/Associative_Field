@@ -1,9 +1,11 @@
-This task is to create a very large associative field, from the transcription. It is a comma separated list of words, which are subjectively related to the _main points and main sentiments_ of the material within the transcription, and to a much lesser degree, related to the material within the comments. To achieve this we will first create a list of the main points and sentiments outlined in the transcript. Then, based off of that (and not the specific verbiage of the transcript nor the comments, we will subjectively create a associative field as outlined below. The purpose is to front-load an LLM with accurate verbiage so as to achieve the most accurate depth of association possible.
+This task is to create a very large Associative Field from the transcription. The Associative Field is a comma separated list of words which are subjectively related to the _main points and main sentiments_ of the material within the transcription, and to a much lesser degree, related to the material within the comments.
+One very important aspect is that the Field can, and should, contain verbiage related to the topic at hand _in any **relevant** language, not just English, if applicable_.
+The purpose of this exercise is to front-load an LLM with accurately related verbiage so as to achieve the most breadth and depth of  association possible.
 ```Definition of Associative Field
 The associative field is a linguistic concept defined as the network of words related to a common theme or aspect of reality, where connections are based on subjective associations rather than strict grammatical or etymological rules.
  It was first introduced by Swiss linguist Charles Bally in 1940, who likened words to constellations, each word acting as a central point around which related terms converge.
  Unlike semantic fields, which have a structured, centripetal organization based on definable semantic differences, associative fields are considered to have a centrifugal nature, extending without fixed boundaries and varying significantly between individuals, social groups, and contexts.
  Examples include the word "bed," which may evoke associations such as sleep, sheets, pillows, or relaxation, depending on personal experience.
  ```
- First, identify the core points and main sentiments. Secondly, create an associative field from these, using your own verbiage and associations as well as some terminology from the json material.
- The field must be structured as a simple comma-separated list of keywords, concept, idioms and sensory items, etc.
+ To reiterate: Firstly identify the core points and main sentiments. Secondly, create an associative field from these, using your own words and associations in addition to terminology from the json material.
+ The Field must be structured as a simple comma-separated list of keywords, concept, idioms and sensory items, and so forth.

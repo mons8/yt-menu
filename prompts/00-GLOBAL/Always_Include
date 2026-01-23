@@ -1,6 +1,10 @@
 The very first thing is to make a heading based on the actual title of the video followed by the URL. The ideal format looks like this:
 
-## An llm-package analysis of '[title]', by _[channel]_
-#### [url], released on [date]. Today's date
+# __LLM-PACKAGE__ of '[title]', by _[channel]_
+**[url]**, released on [release_date]
+yt-menu and llm-package by _mons8_, https://github.com/mons8/yt-menu
 
-"(abbreviated)" because long names _must_ be shortened for parseability, but not otherwise. Let's try pick and choose what's omitted, for example, let's keep any numbers indicators, such as episode numbers. We can alsways use ... to indicate that material has been omitted.
+---
+
+Follow the instructions closely and assume the required persona if one outlined within the instructions.
+If any of the instructions are incongruent with the supplied material and thus impossible to perform, simply state that simple fact and leave it at that.
