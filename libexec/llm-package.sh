@@ -378,11 +378,27 @@ fi
 echo -e "\n${B_WHITE}--- Enter URL for llm-package ---${NC}\n"
 echo -e "${B_BLUE}Sticky Prompts:${NC}"
 has_active_prompts=false
-for i in "${!selected_indices[@]}"; do
-    IFS='|' read -r _ cat item _ _ _ _ color <<< "${menu_items[$i]}"
+
+# Display current Sticky Prompts
+sorted_active_indices=$(for i in "${!selected_indices[@]}"; do echo "$i"; done | sort -n)
+
+for i in $sorted_active_indices; do
+    IFS='|' read -r _ cat item _ _ _ special color <<< "${menu_items[$i]}"
     echo -e "  ${color}${cat}:${NC} $item"
+    # Display the Custom Prompt
+    if [[ "$special" == "interactive" && -n "$custom_prompt_text" ]]; then local preview="$custom_prompt_text%%$'\n'*}" #Only display first line
+        if [${#preview} -gt 50 ]; then preview="${preview:0:47}..."; fi
+        echo -e "      ${B_WHITE}\"$preview\"${NC}"
+    fi
+#     If we want full Custom Prompt text. (comment above then)
+#     if [[ "$special" == "interactive" && -n "$custom_prompt_text" ]]; then
+#         # We print the text and use 'sed' to add 6 spaces to the start of every line
+#         # so it aligns beautifully under the menu item.
+#         echo -e "${B_WHITE}${custom_prompt_text}${NC}" | sed 's/^/      /'
+#     fi
     has_active_prompts=true
 done
+
 if [ "$has_active_prompts" = false ]; then echo "  (None)"; fi
 if [ "$omit_comments" = true ]; then echo -e "  ${RED}[Omit Comments]${NC}"; fi
 echo ""
