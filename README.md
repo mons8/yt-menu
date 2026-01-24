@@ -1,7 +1,7 @@
 # yt-menu
 **Audio Archival** and **context packages** for LLM.
 
-`yt-menu` is a power-user TUI built on top of `yt-dlp`. It minimizes clicks for anyone that likes to archive online content. Additionally it features a powerful methodology for facilitating AI-assisted analysis with the **llm-package** generator, a tool which conviniently converts online videos, comments, metadata and prompts (of your own choosing) into a single, structured, and token-conscious JSON dataset for feeding context to Large Language Models for maximally quick, complete and competent analysis.
+`yt-menu` is a power-user TUI built on top of `yt-dlp`. It minimizes clicks for anyone that likes to archive online content. Additionally it features a powerful methodology for facilitating AI-assisted analysis with the **llm-package** generator, a tool which conveniently converts online videos, comments and metadata (plus injecting prompts of your own choosing) into a single, human-and-machine-readable and token-conscious JSON dataset for feeding context to Large Language Models for maximally quick, complete and competent analysis.
 
 For system safety and convenience it installs its own copies of `yt-dlp` and `FFmpeg` and handles Python dependencies in an isolated `venv`, handling many of these dependencies through a dead-simple install script.
 
