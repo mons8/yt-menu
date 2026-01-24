@@ -3,11 +3,11 @@
 
 `yt-menu` is a power-user TUI built on top of `yt-dlp`. It minimizes clicks for anyone that likes to archive online content. 
 
-Additionally it features a __powerful methodology__ for facilitating AI-assisted analysis with the **llm-package** generator, a tool which conveniently converts online videos, comments and metadata (plus injecting prompts of your own choosing) into a single, human-and-machine-readable and token-conscious JSON dataset for feeding context to Large Language Models for maximally quick, complete and competent analysis.
+Additionally, it features a _powerful_ methodology for facilitating AI-assisted analysis with the `llm-package` generator, a tool which conveniently converts online videos, comments and metadata (plus injecting editable prompts of your own choosing) into a single, human-and-machine-readable and token-conscious JSON dataset for feeding __contextual RAG-adjacent prompts__ to Large Language Models for maximally quick, complete and competent analysis.
 
-For system safety and convenience it installs its own copies of `yt-dlp` and `FFmpeg` and handles Python dependencies in an isolated `venv`, handling many of these dependencies through a dead-simple install script.
+For system safety and convenience a dead-simple script installs Python dependencies in an isolated `venv` as well as installing other dependencies, such as `FFmpeg`, automatically.
 
------------------------------------
+---
 <img width="809" height="339" alt="20260106_230800" src="https://github.com/user-attachments/assets/bab97c26-2ebb-4cfe-b97c-694be26ade94" />
 
 _Main menu_
@@ -16,6 +16,7 @@ _Main menu_
 
 _Prompt Injection_
 
+---
 ## Core Capabilities
 
 
