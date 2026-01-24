@@ -32,10 +32,11 @@ declare -A assigned_hotkeys # map: char -> 1 (collision detection)
 declare -A category_selections # map: cat_name -> selected_index (for 'single' type enforcement)
 custom_prompt_text=""
 opt_no_sticky=false
+opt_no_save_this_run=false
 omit_comments=false
 comments_basedir=""
 # Global flag to track if transcription was created
-TRANSCRIPTION_WAS_SKIPPED=false
+transcription_was_skipped=false
 
 # --- LIBRARY & PRE-FLIGHT ---
 if ! command -v jq &> /dev/null; then echo "[yt-menu] Error: 'jq' command not found." >&2; exit 1; fi
@@ -57,6 +58,11 @@ custom_prompt_text=""
 
 # Saves Promt State
 save_prompt_state() {
+    # If "forget this run" is enabled, do nothing at all.
+    if [ "$opt_no_save_this_run" = true ]; then
+        return
+    fi
+
     # If sticky prompts are disabled, clear state files and return
     if [ "$opt_no_sticky" = true ]; then
         > "$STATE_FILE"
@@ -188,6 +194,7 @@ load_menu_items() {
     # the dynamic generator from assigning them to prompt files.
     assigned_hotkeys["o"]=1  # Reserved for Omit
     assigned_hotkeys["d"]=1  # Reserved for Disable Sticky
+    assigned_hotkeys["x"]=1  # Reserved for Don't Update Sticky
 
     # Loop through Category Directories
     while IFS= read -r cat_dir; do
@@ -288,9 +295,13 @@ display_menu() {
     local sticky_status="[ ]"
     [[ "$opt_no_sticky" == true ]] && sticky_status="[${GREEN}x${NC}]"
 
+    local no_save_status="[ ]"
+    [[ "$opt_no_save_this_run" == true ]] && no_save_status="[${GREEN}x${NC}]"
+
     echo ""
     printf " %s %b %b\n" "o." "$omit_status" "${B_WHITE}Omit downloading comments.${NC}"
     printf " %s %b %b\n" "d." "$sticky_status" "${B_WHITE}Disable Sticky Prompts.${NC}"
+    printf " %s %b %b\n" "x." "$no_save_status" "${B_WHITE}Don't update Sticky Prompts state from this run.${NC}"
 
     echo -e "\n${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} When Done${NC}\n"
 }
@@ -437,6 +448,15 @@ if [ "$prompt_menu_requested" = true ]; then
             continue
         fi
 
+        # Toggle Forget Selections For This Run
+        if [[ "$input_char" == "x" || "$input_char" == "X" ]]; then
+            if [[ "$opt_no_save_this_run" == true ]]; then opt_no_save_this_run=false; else opt_no_save_this_run=true; fi
+            continue
+        fi
+
+        # Standard Items Logic
+        target_index=-1
+
         # Standard Items Logic
         target_index=-1
         for i in "${!menu_items[@]}"; do
@@ -520,7 +540,7 @@ cleanup() {
 
     if [ $exit_code -eq 0 ]; then
         echo "[yt-menu] -----------------------------------------------------"
-        if [ "$TRANSCRIPTION_WAS_SKIPPED" = true ]; then
+        if [ "$transcription_was_skipped" = true ]; then
             echo -e "[yt-menu] ${YELLOW}Warning: No subtitles found. Package lacks transcription.${NC}"
         fi
         echo -n "[yt-menu] Cleaning up ($tmp_dir)..."
@@ -608,7 +628,7 @@ if [ -n "$best_sub_file" ]; then
     fi
 fi
 
-if [ -z "$structured_transcription_file" ]; then TRANSCRIPTION_WAS_SKIPPED=true; fi
+if [ -z "$structured_transcription_file" ]; then transcription_was_skipped=true; fi
 
 # --- FINAL PACKAGE ---
 echo "[yt-menu] Creating final package..."
