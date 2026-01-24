@@ -574,20 +574,14 @@ if [ ${#available_sub_langs[@]} -gt 0 ]; then
     fi
 fi
 
-# --- METADATA PARSING ---
-fname_no_path=$(basename "$base_filename")
-id_and_date_part="${fname_no_path##* \[}"
-channel_and_title_part="${fname_no_path%% \[*}"
-video_id="${id_and_date_part%%\]*}"; upload_date="${id_and_date_part##*.}"
-channel="${channel_and_title_part%% - *}"; video_title="${channel_and_title_part#* - }"
-video_url="https://www.youtube.com/watch?v=${video_id}"
-#  - COUNTING COMMENTS -
+# --- COUNTING COMMENTS ---
 if [ "$omit_comments" = false ]; then
     # Count the number of items in the 'comments' array
     comment_count=$(jq -r '(.comments | length) // 0' "$info_json_file")
 else
     comment_count="Omitted"
 fi
+
 # --- COMMENTS RESTRUCTURING ---
 threaded_comments_file=""
 if [ "$omit_comments" = false ]; then
@@ -621,9 +615,51 @@ echo "[yt-menu] Creating final package..."
 package_basename=$(basename "${base_filename}.llm-package.json")
 temp_package_path="$tmp_dir/$package_basename"
 
-jq_args=(--arg title "$video_title" --arg channel "$channel" --arg url "$url" --arg cc "$comment_count")
-jq_filter='{metadata: {title: $title, channel: $channel, url: $url, comment_count: $cc}}'
+# Generate new metadata fields not present in the info.json
+generation_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ") # ISO 8601 format
 
+# Start building jq arguments. We will pass the info.json as the main input context to jq.
+jq_args=(
+    --arg filename "$package_basename"
+    --arg gen_date "$generation_date"
+    --arg comment_count "$comment_count"
+    --arg user_url_input "$url"
+)
+
+# Start building the jq filter string. This creates the base object with expanded metadata.
+# Using `// fallback` provides graceful handling for optional/missing keys from yt-dlp.
+jq_filter='
+{
+  metadata: {
+    llm_package_filename: $filename,
+    llm_package_generation_date: $gen_date,
+    title: .title,
+    id: .id,
+    webpage_url: .webpage_url,
+    user_supplied_url: $user_url_input,
+    upload_date: .upload_date,
+    duration_string: .duration_string,
+    was_live: (.was_live // null),
+    location: (.location // null),
+    uploader: .uploader,
+    channel: .channel,
+    channel_url: .channel_url,
+    channel_follower_count: (.channel_follower_count // null),
+    view_count: (.view_count // null),
+    like_count: (.like_count // null),
+    dislike_count: (.dislike_count // null),
+    comment_count: $comment_count,
+    average_rating: (.average_rating // null),
+    rating_count: (.rating_count // null),
+    tags: (.tags // []),
+    playlist: (.playlist // null),
+    playlist_index: (.playlist_index // null),
+    playlist_webpage_url: (.playlist_webpage_url // null)
+  }
+}
+'
+
+# Conditionally add other data components to the jq command
 # Inject Instructions (Prepend)
 if [ -n "$llm_instructions_json" ]; then
     jq_args+=(--argjson inst "$llm_instructions_json")
@@ -654,7 +690,8 @@ if [ -n "$llm_instructions_json" ]; then
     jq_filter="$jq_filter"' + {llm_instructions_reminder: $inst}'
 fi
 
-jq -n "${jq_args[@]}" "$jq_filter" > "$temp_package_path"
+# Execute the final, combined jq command, reading from the info.json file
+jq "${jq_args[@]}" "$jq_filter" "$info_json_file" > "$temp_package_path"
 
 if [ -s "$temp_package_path" ]; then
     final_dest="$comments_basedir/$package_basename"
