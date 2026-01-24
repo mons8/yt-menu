@@ -1,5 +1,5 @@
 # yt-menu
-**Audio Archival** and **context packages** for LLM.
+**yt-dlp TUI** and **context packages** for LLM.
 
 `yt-menu` is a power-user TUI built on top of `yt-dlp`. It minimizes clicks for anyone that likes to archive online content. 
 
