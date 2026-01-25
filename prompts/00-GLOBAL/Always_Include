@@ -1,7 +1,7 @@
 The very first thing is to make a heading based on the actual title of the video followed by the URL. The ideal format looks like this:
 """
 # [title]
-## by [[channel]]([channel_url])
+### by [[channel]]([channel_url])
 [webpage_url]
 
 ---
@@ -10,11 +10,11 @@ The very first thing is to make a heading based on the actual title of the video
 <!-- IF was_live is true, include the next line -->
 This content was originally a _live stream_.
 
-<!-- IF [user_input_url] is not a playlist, or [playlist] is not null, include the next line. playlist_index, if null can still be deduced from user_input_url. [playlist], if null must be omitted and the URL must be built without it's title.  -->
+<!-- Parse [user_input_url]. If not playlist, omit the following line. Otherwise, populate playlist_index, and playlist_id below (these may also be stated directly in the metadata). -->
 Part [playlist_index] of playlist "[[playlist]](https://www.youtube.com/[playlist_id])"
 
 ---
-_**yt-menu** and **llm-package** by mons8, https://github.com/mons8/yt-menu_2
+`yt-menu` and `llm-package` by mons8 https://github.com/mons8/yt-menu
 
 ---
 """
