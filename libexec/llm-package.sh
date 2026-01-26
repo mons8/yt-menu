@@ -445,7 +445,6 @@ while true; do
             # Wait for input with a 1-second timeout.
             if read -r -n 1 -t 1 input_char; then
                 # Key was pressed: Stop the countdown immediately.
-                # The specific key ('o', '+', etc.) will be processed below.
                 run_countdown=-1
             else
                 # Timeout occurred: Decrement the countdown and redraw.
@@ -455,13 +454,27 @@ while true; do
         else # Timer is not active, wait for input indefinitely
             read -r -n 1 input_char || break
         fi
-        # --- Process Input ---
+
+        # --- PROCESS INPUTS ---
+
+        # Settings Items
         if [[ "$input_char" == "+" ]]; then break; fi
+        # `u` needs echo
         if [[ "$input_char" == "u" ]]; then url=""; run_countdown=-1; continue; fi
-
-        # --- EXISTING MENU LOGIC (with new 't' option) ---
-
-        # Toggle Timer
+        if [[ "$input_char" == "o" || "$input_char" == "O" ]]; then
+            if [[ "$omit_comments" == true ]]; then omit_comments=false; else omit_comments=true; fi
+            continue
+        fi
+        if [[ "$input_char" == "d" || "$input_char" == "D" ]]; then
+            if [[ "$opt_no_sticky" == true ]]; then opt_no_sticky=false; else opt_no_sticky=true; fi
+            # Update config immediately regarding the preference
+            update_config_file
+            continue
+        fi
+        if [[ "$input_char" == "x" || "$input_char" == "X" ]]; then
+            if [[ "$opt_no_save_this_run" == true ]]; then opt_no_save_this_run=false; else opt_no_save_this_run=true; fi
+            continue
+        fi
         if [[ "$input_char" == "t" || "$input_char" == "T" ]]; then
             if [[ "$opt_timer_enabled" == true ]]; then
                 opt_timer_enabled=false
@@ -484,8 +497,59 @@ while true; do
             continue
         fi
 
-        # (Your existing 'o', 'd', 'x', and item selection logic goes here)
-        # ...
+        # Normal selections
+        target_index=-1
+        for i in "${!menu_items[@]}"; do
+            IFS='|' read -r hk _ _ _ _ _ _ _ <<< "${menu_items[$i]}"
+            if [[ "${hk,,}" == "${input_char,,}" ]]; then target_index=$i; break; fi
+        done
+
+        if [ "$target_index" -ne -1 ]; then
+            IFS='|' read -r _ cat _ _ _ select_type special _ <<< "${menu_items[$target_index]}"
+
+            # Interactive Special Flag
+            if [[ "$special" == "interactive" ]]; then
+                if [[ -v "selected_indices[$target_index]" ]]; then
+                    unset "selected_indices[$target_index]"
+                    # Don't clear text immediately in case of accidental toggle,
+                    # but maybe we should? The prompt implies state saving text.
+                    # We will keep text in memory but unselect the item.
+                else
+                    echo -e "\n${B_WHITE}Enter custom prompt (End with 'EOF' on new line):${NC}"
+                    # If previous text exists, show it (optional, but good UX)
+                    if [ -n "$custom_prompt_text" ]; then echo -e "${CYAN}Current:${NC} $custom_prompt_text"; fi
+
+                    line=""; buffer=""
+                    while IFS= read -r line; do [[ "$line" == "EOF" ]] && break; buffer+="${line}"$'\n'; done
+
+                    # Only update text if user typed something (excluding EOF).
+                    # If empty, keep old text? No, assume replace.
+                    if [ -n "${buffer%$'\n'}" ]; then
+                         custom_prompt_text="${buffer%$'\n'}"
+                    fi
+
+                    if [[ -n "${custom_prompt_text//[[:space:]]/}" ]]; then
+                        selected_indices[$target_index]=1
+                    fi
+                fi
+            else
+                # Toggle Normal Selection
+                if [[ -v "selected_indices[$target_index]" ]]; then
+                    unset "selected_indices[$target_index]"
+                    if [[ "${category_selections[$cat]}" == "$target_index" ]]; then unset "category_selections[$cat]"; fi
+                else
+                    if [[ "$select_type" == "single" ]]; then
+                        if [[ -v "category_selections[$cat]" ]]; then
+                            old_idx="${category_selections[$cat]}"
+                            unset "selected_indices[$old_idx]"
+                        fi
+                        category_selections[$cat]=$target_index
+                    fi
+                    selected_indices[$target_index]=1
+                fi
+            fi
+        fi
+
     fi
 done
 
@@ -645,6 +709,7 @@ jq_filter='
     view_count: (.view_count // null),
     like_count: (.like_count // null),
     dislike_count: (.dislike_count // null),
+    total_comments: (.comment_count // null),
     comment_count: $comment_count,
     average_rating: (.average_rating // null),
     rating_count: (.rating_count // null),
