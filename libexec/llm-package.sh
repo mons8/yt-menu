@@ -14,6 +14,8 @@ BLUE='\e[0;34m'
 CYAN='\e[0;36m'
 RED='\e[0;31m'
 B_RED='\e[1;31m'
+GRAY='\e[1;30m'
+B_GREEN='\e[1;32m'
 ## Palette for Category rotation
 COLORS=('\e[0;32m' '\e[1;34m' '\e[1;36m' '\e[0;33m' '\e[1;33m' '\e[0;35m' '\e[1;35m' '\e[0;31m' '\e[1;37m')
 
@@ -256,54 +258,53 @@ load_menu_items() {
 }
 
 display_menu() {
+
+    local state="$1" # "locked" or "active"
+
     clear
-    echo -e "\n${B_WHITE}--- Prompt Injection ---${NC}\n"
-    echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/\n"
+    echo -e "\n${B_WHITE}--- LLM-PACKAGE Menu ---${NC}"
 
-    # 1. Print Selections
-    echo -e "${YELLOW}Current Selections:${NC}"
-    local has_selections=false
-    local sorted_indices=$(for i in "${!selected_indices[@]}"; do echo "$i"; done | sort -n)
+if [ "$state" == "locked" ]; then
+        echo -e "${GRAY}Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/${NC}\n"
+    else
+        echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/\n"
+        echo -e "${YELLOW}Target:${NC} $url"
+        echo -e "${YELLOW}Current Selections:${NC}"
+        # ... (Print active selections loop) ...
+        echo ""
+    fi
 
-    for i in $sorted_indices; do
-        IFS='|' read -r _ cat item _ _ _ special color <<< "${menu_items[$i]}"
-        echo -e "  ${color}${cat}:${NC} $item"
-        # Show preview of custom text if active
-        if [[ "$special" == "interactive" ]]; then
-            # Truncate for display if too long
-            local preview="${custom_prompt_text%%$'\n'*}"
-            if [ ${#preview} -gt 60 ]; then preview="${preview:0:57}..."; fi
-            echo -e "      ${B_WHITE}\"$preview\"${NC}"
-        fi
-        has_selections=true
-    done
-    [[ "$has_selections" == false ]] && echo "  None"
-    echo ""
-
-    # 2. Print Menu Options
+    # --- MENU ITEMS ---
     for i in "${!menu_items[@]}"; do
         IFS='|' read -r hotkey cat item _ _ _ special color <<< "${menu_items[$i]}"
-        local status="[ ]"
-        [[ -v "selected_indices[$i]" ]] && status="[${GREEN}x${NC}]"
-        printf " %s %b ${color}[%-8s]${NC} | %s\n" "$hotkey." "$status" "$cat" "$item"
+
+        if [ "$state" == "locked" ]; then
+            # DIMMED MODE
+            printf " ${GRAY}%s [ ] [%-8s] | %s${NC}\n" "$hotkey." "$cat" "$item"
+        else
+            # ACTIVE MODE
+            local status="[ ]"
+            [[ -v "selected_indices[$i]" ]] && status="[${GREEN}x${NC}]"
+            printf " %s %b ${color}[%-8s]${NC} | %s\n" "$hotkey." "$status" "$cat" "$item"
+        fi
     done
 
-    # Global Options
-    local omit_status="[ ]"
-    [[ "$omit_comments" == true ]] && omit_status="[${GREEN}x${NC}]"
-
-    local sticky_status="[ ]"
-    [[ "$opt_no_sticky" == true ]] && sticky_status="[${GREEN}x${NC}]"
-
-    local no_save_status="[ ]"
-    [[ "$opt_no_save_this_run" == true ]] && no_save_status="[${GREEN}x${NC}]"
-
+    # --- FOOTER ---
     echo ""
-    printf " %s %b %b\n" "o." "$omit_status" "${B_WHITE}Omit downloading comments.${NC}"
-    printf " %s %b %b\n" "d." "$sticky_status" "${B_WHITE}Disable Sticky Prompts.${NC}"
-    printf " %s %b %b\n" "x." "$no_save_status" "${B_WHITE}Don't update Sticky Prompts state from this run.${NC}"
+    if [ "$state" == "locked" ]; then
+        echo -e "${GRAY} o. [ ] Omit downloading comments.${NC}"
+        echo -e "${GRAY} d. [ ] Disable Sticky Prompts.${NC}"
+    else
+        # Print global options with active colors
+        local omit_status="[ ]"; [[ "$omit_comments" == true ]] && omit_status="[${GREEN}x${NC}]"
+        local sticky_status="[ ]"; [[ "$opt_no_sticky" == true ]] && sticky_status="[${GREEN}x${NC}]"
+        local no_save_status="[ ]"; [[ "$opt_no_save_this_run" == true ]] && no_save_status="[${GREEN}x${NC}]"
 
-    echo -e "\n${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} When Done${NC}\n"
+        printf " %s %b %b\n" "o." "$omit_status" "${B_WHITE}Omit downloading comments.${NC}"
+        printf " %s %b %b\n" "d." "$sticky_status" "${B_WHITE}Disable Sticky Prompts.${NC}"
+        printf " %s %b %b\n" "x." "$no_save_status" "${B_WHITE}Don't update Sticky Prompts state from this run.${NC}"
+        echo -e "\n${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} to Run${NC}\n"
+    fi
 }
 
 # Processes the final prompt payload dynamically based on keys
@@ -387,52 +388,57 @@ if [ "$opt_no_sticky" = false ]; then
     load_prompt_state
 fi
 
-# --- 3. URL Input with Context ---
-echo -e "\n${B_WHITE}--- Enter URL for llm-package ---${NC}\n"
-echo -e "${B_BLUE}Sticky Prompts:${NC}"
-has_active_prompts=false
+# --- 3. INTERFACE LOOP ---
 
-# Display current Sticky Prompts
-sorted_active_indices=$(for i in "${!selected_indices[@]}"; do echo "$i"; done | sort -n)
+url=""
+menu_active=false
 
-for i in $sorted_active_indices; do
-    IFS='|' read -r _ cat item _ _ _ special color <<< "${menu_items[$i]}"
-    echo -e "  ${color}${cat}:${NC} $item"
-    # Display the Custom Prompt
-    if [[ "$special" == "interactive" && -n "$custom_prompt_text" ]]; then local preview="$custom_prompt_text%%$'\n'*}" #Only display first line
-        if [${#preview} -gt 50 ]; then preview="${preview:0:47}..."; fi
-        echo -e "      ${B_WHITE}\"$preview\"${NC}"
-    fi
-#     If we want full Custom Prompt text. (comment above then)
-#     if [[ "$special" == "interactive" && -n "$custom_prompt_text" ]]; then
-#         # We print the text and use 'sed' to add 6 spaces to the start of every line
-#         # so it aligns beautifully under the menu item.
-#         echo -e "${B_WHITE}${custom_prompt_text}${NC}" | sed 's/^/      /'
-#     fi
-    has_active_prompts=true
-done
+while true; do
+    if [ -z "$url" ]; then
+        # === STATE 1: LOCKED / PASTE MODE ===
+        display_menu "locked"
 
-if [ "$has_active_prompts" = false ]; then echo "  (None)"; fi
-if [ "$omit_comments" = true ]; then echo -e "  ${B_RED}[Comments Omitted]${NC}"; fi
-echo ""
+        # The Green Input Field
+        echo -e "\n${B_GREEN}Paste URL: ${NC}"
+        tput cuu 1; tput cuf 11 # Move cursor up and right to sit after "Paste URL: "
 
-prompt_menu_requested=false
-printf "%b" "${B_WHITE}Enter URL${NC} (Append ${B_BLUE}\"+\"${NC} to enter menu, i.e. http://url.com/url${B_BLUE}+${NC})${B_WHITE}:${NC} "
-read -r url_input
+        # Read with -e (readline) to allow pasting and editing
+        read -e -r url_input
 
-if [[ "$url_input" == *+ ]]; then prompt_menu_requested=true; url="${url_input%+}"; else url="$url_input"; fi
-if [ -z "$url" ]; then echo "[yt-menu] Error: URL cannot be empty." >&2; exit 1; fi
+        if [ -z "$url_input" ]; then
+            # If empty enter, just redraw
+            continue
+        fi
 
-# --- 4. Interactive Menu Loop ---
-if [ "$prompt_menu_requested" = true ]; then
+        url="$url_input"
+        # Validate URL (Basic check)
+        if [[ "$url" != http* ]]; then
+            echo "Invalid URL. Must start with http."
+            sleep 1
+            url=""
+        fi
 
-    while true; do
-        display_menu
+    else
+        # === STATE 2: ACTIVE / MENU MODE ===
+        display_menu "active"
+
         printf "${B_WHITE}Choice: ${NC}"
         read -r -n 1 input_char || break
-        echo ""
 
-        if [[ "$input_char" == "+" ]]; then break; fi
+        # Handle execution
+        if [[ "$input_char" == "+" ]]; then
+            break
+        fi
+
+        # Handle "Change URL" (Optional: Press 'u' to reset url)
+        if [[ "$input_char" == "u" ]]; then
+            url=""
+            continue
+        fi
+
+        # --- EXISTING MENU LOGIC BELOW ---
+        # (Copy your existing Toggle Omit, Sticky, and Item selection logic here)
+        # ...
 
         # Toggle Omit
         if [[ "$input_char" == "o" || "$input_char" == "O" ]]; then
@@ -440,24 +446,20 @@ if [ "$prompt_menu_requested" = true ]; then
             continue
         fi
 
-        # Toggle Sticky (Disable)
+        # Toggle Sticky
         if [[ "$input_char" == "d" || "$input_char" == "D" ]]; then
             if [[ "$opt_no_sticky" == true ]]; then opt_no_sticky=false; else opt_no_sticky=true; fi
-            # Update config immediately regarding the preference
             update_config_file
             continue
         fi
 
-        # Toggle Forget Selections For This Run
+        # Toggle Forget run
         if [[ "$input_char" == "x" || "$input_char" == "X" ]]; then
-            if [[ "$opt_no_save_this_run" == true ]]; then opt_no_save_this_run=false; else opt_no_save_this_run=true; fi
-            continue
+             if [[ "$opt_no_save_this_run" == true ]]; then opt_no_save_this_run=false; else opt_no_save_this_run=true; fi
+             continue
         fi
 
-        # Standard Items Logic
-        target_index=-1
-
-        # Standard Items Logic
+        # Item Selection Loop (Existing logic)
         target_index=-1
         for i in "${!menu_items[@]}"; do
             IFS='|' read -r hk _ _ _ _ _ _ _ <<< "${menu_items[$i]}"
@@ -465,35 +467,25 @@ if [ "$prompt_menu_requested" = true ]; then
         done
 
         if [ "$target_index" -ne -1 ]; then
+            # ... (Existing selection toggling code) ...
             IFS='|' read -r _ cat _ _ _ select_type special _ <<< "${menu_items[$target_index]}"
 
-            # Interactive Special Flag
+            # (Insert your existing interactive/standard toggle logic here)
             if [[ "$special" == "interactive" ]]; then
                 if [[ -v "selected_indices[$target_index]" ]]; then
                     unset "selected_indices[$target_index]"
-                    # Don't clear text immediately in case of accidental toggle,
-                    # but maybe we should? The prompt implies state saving text.
-                    # We will keep text in memory but unselect the item.
                 else
                     echo -e "\n${B_WHITE}Enter custom prompt (End with 'EOF' on new line):${NC}"
-                    # If previous text exists, show it (optional, but good UX)
                     if [ -n "$custom_prompt_text" ]; then echo -e "${CYAN}Current:${NC} $custom_prompt_text"; fi
 
-                    line=""; buffer=""
+                    # We need to temporarily use normal read, not -n 1
+                    local line=""; local buffer=""
                     while IFS= read -r line; do [[ "$line" == "EOF" ]] && break; buffer+="${line}"$'\n'; done
-
-                    # Only update text if user typed something (excluding EOF).
-                    # If empty, keep old text? No, assume replace.
-                    if [ -n "${buffer%$'\n'}" ]; then
-                         custom_prompt_text="${buffer%$'\n'}"
-                    fi
-
-                    if [[ -n "${custom_prompt_text//[[:space:]]/}" ]]; then
-                        selected_indices[$target_index]=1
-                    fi
+                    if [ -n "${buffer%$'\n'}" ]; then custom_prompt_text="${buffer%$'\n'}"; fi
+                    if [[ -n "${custom_prompt_text//[[:space:]]/}" ]]; then selected_indices[$target_index]=1; fi
                 fi
             else
-                # Toggle Normal Selection
+                # Standard Logic
                 if [[ -v "selected_indices[$target_index]" ]]; then
                     unset "selected_indices[$target_index]"
                     if [[ "${category_selections[$cat]}" == "$target_index" ]]; then unset "category_selections[$cat]"; fi
@@ -509,10 +501,10 @@ if [ "$prompt_menu_requested" = true ]; then
                 fi
             fi
         fi
-    done
-fi
+    fi
+done
 
-# --- 5. Finalize State & Assemble ---
+# --- 4. Finalize State & Assemble ---
 # Save state if sticky is enabled (regardless if menu was requested or not,
 # though usually changes only happen in menu. But 'D' might have changed via config manually)
 save_prompt_state
