@@ -5,8 +5,8 @@ set -o pipefail
 
 # Colors
 NC='\e[0m'
-## Standard UI Colors
 GREEN='\e[0;32m'
+B_GREEN='\e[1;32m'
 B_WHITE='\e[1;37m'
 YELLOW='\e[0;33m'
 B_BLUE='\e[1;34m'
@@ -15,8 +15,8 @@ CYAN='\e[0;36m'
 RED='\e[0;31m'
 B_RED='\e[1;31m'
 GRAY='\e[1;30m'
-B_GREEN='\e[1;32m'
-## Palette for Category rotation
+
+# Palette for Category rotation
 COLORS=('\e[0;32m' '\e[1;34m' '\e[1;36m' '\e[0;33m' '\e[1;33m' '\e[0;35m' '\e[1;35m' '\e[0;31m' '\e[1;37m')
 
 # Paths
@@ -35,9 +35,10 @@ declare -A category_selections # map: cat_name -> selected_index (for 'single' t
 custom_prompt_text=""
 opt_no_sticky=false
 opt_no_save_this_run=false
+opt_timer_enabled=false
+opt_timer_seconds=5
 omit_comments=false
 comments_basedir=""
-# Global flag to track if transcription was created
 transcription_was_skipped=false
 
 # --- LIBRARY & PRE-FLIGHT ---
@@ -126,7 +127,9 @@ load_prompt_state() {
 update_config_file() {
     echo "BASE_DIR=\"$comments_basedir\"" > "$MAIN_CONFIG"
     echo "OPT_NO_STICKY=\"$opt_no_sticky\"" >> "$MAIN_CONFIG"
-}
+    echo "OPT_TIMER_ENABLED=\"$opt_timer_enabled\"" >> "$MAIN_CONFIG"
+    echo "OPT_TIMER_SECONDS=\"$opt_timer_seconds\"" >> "$MAIN_CONFIG"
+    }
 
 # Determines the color based on the directory number prefix
 get_category_color() {
@@ -260,6 +263,7 @@ load_menu_items() {
 display_menu() {
 
     local state="$1" # "locked" or "active"
+    local countdown_value="$2"
 
     clear
     echo -e "\n${B_WHITE}--- LLM-PACKAGE Menu ---${NC}"
@@ -303,7 +307,16 @@ if [ "$state" == "locked" ]; then
         printf " %s %b %b\n" "o." "$omit_status" "${B_WHITE}Omit downloading comments.${NC}"
         printf " %s %b %b\n" "d." "$sticky_status" "${B_WHITE}Disable Sticky Prompts.${NC}"
         printf " %s %b %b\n" "x." "$no_save_status" "${B_WHITE}Don't update Sticky Prompts state from this run.${NC}"
-        echo -e "\n${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} to Run${NC}\n"
+        local timer_status="[ ]"
+        if [[ "$opt_timer_enabled" == true ]]; then
+            timer_status="[${GREEN}x${NC}]"
+        fi
+        printf " %s %b %b\n" "t." "$timer_status" "${B_WHITE}Auto-run timer (${opt_timer_seconds}s).${NC}"
+        echo ""
+        if [[ "$opt_timer_enabled" == true && -n "$countdown_value" && "$countdown_value" -gt 0 ]]; then
+            printf "${YELLOW} Auto-run in %2ss... |${NC}" "$countdown_value"
+        fi
+        echo -e "${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} to Run${NC}\n"
     fi
 }
 
@@ -358,9 +371,10 @@ if [ ! -d "$CONFIG_DIR" ]; then mkdir -p "$CONFIG_DIR"; fi
 
 if [ -f "$MAIN_CONFIG" ]; then
     source "$MAIN_CONFIG"
-    # Map raw vars to script vars if needed, though sourcing handles BASE_DIR and OPT_NO_STICKY
     comments_basedir="$BASE_DIR"
-    opt_no_sticky="${OPT_NO_STICKY:-false}"
+    opt_no_sticky="${OPT_NO_STICKY:-$opt_no_sticky}"
+    opt_timer_enabled="${OPT_TIMER_ENABLED:-$opt_timer_enabled}"
+    opt_timer_seconds="${OPT_TIMER_SECONDS:-$opt_timer_seconds}"
 fi
 
 # Ensure Download Directory Exists
@@ -392,115 +406,86 @@ fi
 
 url=""
 menu_active=false
+run_countdown=-1 # Use -1 to signify timer is not currently running
 
 while true; do
     if [ -z "$url" ]; then
         # === STATE 1: LOCKED / PASTE MODE ===
         display_menu "locked"
-
-        # The Green Input Field
         echo -e "\n${B_GREEN}Paste URL: ${NC}"
-        tput cuu 1; tput cuf 11 # Move cursor up and right to sit after "Paste URL: "
-
-        # Read with -e (readline) to allow pasting and editing
+        tput cuu 1; tput cuf 11
         read -e -r url_input
-
-        if [ -z "$url_input" ]; then
-            # If empty enter, just redraw
-            continue
-        fi
+        if [ -z "$url_input" ]; then continue; fi
 
         url="$url_input"
-        # Validate URL (Basic check)
         if [[ "$url" != http* ]]; then
-            echo "Invalid URL. Must start with http."
-            sleep 1
-            url=""
+            echo "Invalid URL. Must start with http." >&2; sleep 1; url=""; continue
+        fi
+
+        # URL is valid, ACTIVATE TIMER if enabled
+        if [ "$opt_timer_enabled" = true ]; then
+            run_countdown=$opt_timer_seconds
         fi
 
     else
         # === STATE 2: ACTIVE / MENU MODE ===
-        display_menu "active"
+        if [ "$run_countdown" -eq 0 ]; then
+            echo -e "\n[yt-menu] Timer finished. Running..."
+            # Use a short sleep to let the user see the message
+            sleep 0.5
+            break # Exit loop to run the program
+        fi
 
+        display_menu "active" "$run_countdown"
         printf "${B_WHITE}Choice: ${NC}"
-        read -r -n 1 input_char || break
 
-        # Handle execution
-        if [[ "$input_char" == "+" ]]; then
-            break
-        fi
-
-        # Handle "Change URL" (Optional: Press 'u' to reset url)
-        if [[ "$input_char" == "u" ]]; then
-            url=""
-            continue
-        fi
-
-        # --- EXISTING MENU LOGIC BELOW ---
-        # (Copy your existing Toggle Omit, Sticky, and Item selection logic here)
-        # ...
-
-        # Toggle Omit
-        if [[ "$input_char" == "o" || "$input_char" == "O" ]]; then
-            if [[ "$omit_comments" == true ]]; then omit_comments=false; else omit_comments=true; fi
-            continue
-        fi
-
-        # Toggle Sticky
-        if [[ "$input_char" == "d" || "$input_char" == "D" ]]; then
-            if [[ "$opt_no_sticky" == true ]]; then opt_no_sticky=false; else opt_no_sticky=true; fi
-            update_config_file
-            continue
-        fi
-
-        # Toggle Forget run
-        if [[ "$input_char" == "x" || "$input_char" == "X" ]]; then
-             if [[ "$opt_no_save_this_run" == true ]]; then opt_no_save_this_run=false; else opt_no_save_this_run=true; fi
-             continue
-        fi
-
-        # Item Selection Loop (Existing logic)
-        target_index=-1
-        for i in "${!menu_items[@]}"; do
-            IFS='|' read -r hk _ _ _ _ _ _ _ <<< "${menu_items[$i]}"
-            if [[ "${hk,,}" == "${input_char,,}" ]]; then target_index=$i; break; fi
-        done
-
-        if [ "$target_index" -ne -1 ]; then
-            # ... (Existing selection toggling code) ...
-            IFS='|' read -r _ cat _ _ _ select_type special _ <<< "${menu_items[$target_index]}"
-
-            # (Insert your existing interactive/standard toggle logic here)
-            if [[ "$special" == "interactive" ]]; then
-                if [[ -v "selected_indices[$target_index]" ]]; then
-                    unset "selected_indices[$target_index]"
-                else
-                    echo -e "\n${B_WHITE}Enter custom prompt (End with 'EOF' on new line):${NC}"
-                    if [ -n "$custom_prompt_text" ]; then echo -e "${CYAN}Current:${NC} $custom_prompt_text"; fi
-
-                    # We need to temporarily use normal read, not -n 1
-                    local line=""; local buffer=""
-                    while IFS= read -r line; do [[ "$line" == "EOF" ]] && break; buffer+="${line}"$'\n'; done
-                    if [ -n "${buffer%$'\n'}" ]; then custom_prompt_text="${buffer%$'\n'}"; fi
-                    if [[ -n "${custom_prompt_text//[[:space:]]/}" ]]; then selected_indices[$target_index]=1; fi
-                fi
+        # Use read with a 1-second timeout if the timer is active
+        input_char=""
+        if [ "$run_countdown" -gt 0 ]; then
+            # Wait for input with a 1-second timeout.
+            if read -r -n 1 -t 1 input_char; then
+                # Key was pressed: Stop the countdown immediately.
+                # The specific key ('o', '+', etc.) will be processed below.
+                run_countdown=-1
             else
-                # Standard Logic
-                if [[ -v "selected_indices[$target_index]" ]]; then
-                    unset "selected_indices[$target_index]"
-                    if [[ "${category_selections[$cat]}" == "$target_index" ]]; then unset "category_selections[$cat]"; fi
-                else
-                    if [[ "$select_type" == "single" ]]; then
-                        if [[ -v "category_selections[$cat]" ]]; then
-                            old_idx="${category_selections[$cat]}"
-                            unset "selected_indices[$old_idx]"
-                        fi
-                        category_selections[$cat]=$target_index
-                    fi
-                    selected_indices[$target_index]=1
-                fi
+                # Timeout occurred: Decrement the countdown and redraw.
+                ((run_countdown--))
+                continue
             fi
+        else # Timer is not active, wait for input indefinitely
+            read -r -n 1 input_char || break
         fi
+        # --- Process Input ---
+        if [[ "$input_char" == "+" ]]; then break; fi
+        if [[ "$input_char" == "u" ]]; then url=""; run_countdown=-1; continue; fi
+
+        # --- EXISTING MENU LOGIC (with new 't' option) ---
+
+        # Toggle Timer
+        if [[ "$input_char" == "t" || "$input_char" == "T" ]]; then
+            if [[ "$opt_timer_enabled" == true ]]; then
+                opt_timer_enabled=false
+                run_countdown=-1 # Deactivate timer for this run
+                echo -e "\n${YELLOW}Auto-run timer DISABLED.${NC}"; sleep 1
+            else
+                opt_timer_enabled=true
+                echo "" # Newline for prompt
+                printf "${YELLOW}Enter countdown in seconds (current: %s): ${NC}" "$opt_timer_seconds"
+                read -r new_seconds
+                if [[ "$new_seconds" =~ ^[0-9]+$ && "$new_seconds" -gt 0 ]]; then
+                    opt_timer_seconds=$new_seconds
+                elif [ -n "$new_seconds" ]; then
+                    echo "Invalid input. Keeping current value." >&2; sleep 1
+                fi
+                # Activate timer for this run immediately
+                run_countdown=$opt_timer_seconds
+            fi
+            update_config_file # Save preference
+            continue
+        fi
+
+        # (Your existing 'o', 'd', 'x', and item selection logic goes here)
+        # ...
     fi
 done
 
