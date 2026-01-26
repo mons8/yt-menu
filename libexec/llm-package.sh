@@ -317,6 +317,7 @@ if [ "$state" == "locked" ]; then
             printf "${YELLOW} Auto-run in %2ss... |${NC}" "$countdown_value"
         fi
         echo -e "${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} to Run${NC}\n"
+        printf " %s %b %b\n" "u." "${B_WHITE}Re-enter URL..${NC}\n"
     fi
 }
 
@@ -609,27 +610,62 @@ base_filename="${info_json_file%.info.json}"
 description_file="$base_filename.description"
 
 # --- PHASE 2: SUBTITLE SELECTION ---
+# Analyzes subs, prints info about selections, chooses the most desirable
+# (exact native match, primary tag match, English fallback, or first available)
+# and converts it's identifier into the actual call for that actual subtitle according to YT API
+
 echo "[yt-menu] Phase 2: Subtitle analysis..."
 mapfile -t available_sub_langs < <(jq -r '(.subtitles // {}) + (.automatic_captions // {}) | keys[]' "$info_json_file" | sort -u)
 original_lang=$(jq -r '.language // "en"' "$info_json_file")
+echo "[yt-menu]   -> Video native language detected: $original_lang"
+if [ ${#available_sub_langs[@]} -gt 0 ]; then
+    echo "[yt-menu]   -> Available subtitles: ${available_sub_langs[*]}"
+else
+    echo "[yt-menu]   -> No subtitles found in metadata."
+fi
 
 best_lang_to_download=""
+download_reason="" # Store the reason for selection
+
 if [ ${#available_sub_langs[@]} -gt 0 ]; then
     # 1. Exact match
-    for lang in "${available_sub_langs[@]}"; do [[ "$lang" == "$original_lang" ]] && best_lang_to_download="$lang" && break; done
+    for lang in "${available_sub_langs[@]}"; do
+        if [[ "$lang" == "$original_lang" ]]; then
+            best_lang_to_download="$lang"
+            download_reason="Exact match for native language ($original_lang)"
+            break
+        fi
+    done
+
     # 2. Primary tag match (en from en-US)
     if [ -z "$best_lang_to_download" ] && [[ "$original_lang" == *-* ]]; then
         primary="${original_lang%%-*}"
-        for lang in "${available_sub_langs[@]}"; do [[ "$lang" == "$primary" ]] && best_lang_to_download="$lang" && break; done
+        for lang in "${available_sub_langs[@]}"; do
+            if [[ "$lang" == "$primary" ]]; then
+                best_lang_to_download="$lang"
+                download_reason="Primary tag match for native language ($primary)"
+                break
+            fi
+        done
     fi
     # 3. Fallback to English
     if [ -z "$best_lang_to_download" ]; then
-        for lang in "${available_sub_langs[@]}"; do [[ "$lang" == "en" ]] && best_lang_to_download="$lang" && break; done
+        for lang in "${available_sub_langs[@]}"; do
+            if [[ "$lang" == "en" ]]; then
+                best_lang_to_download="$lang"
+                download_reason="Fallback to English (en)"
+                break
+            fi
+        done
     fi
     # 4. First available
-    if [ -z "$best_lang_to_download" ]; then best_lang_to_download="${available_sub_langs[0]}"; fi
+    if [ -z "$best_lang_to_download" ]; then
+        best_lang_to_download="${available_sub_langs[0]}"
+        download_reason="Selecting first available language: ${available_sub_langs[0]}"
+    fi
 
     if [ -n "$best_lang_to_download" ]; then
+        echo "[yt-menu]   -> Selection logic: $download_reason" # NEW: Print the selection reason
         echo "[yt-menu]   -> Downloading subtitle: $best_lang_to_download"
         "${YTDLP_COMMAND_ARRAY[@]}" --no-playlist --write-subs --write-auto-subs --sub-lang "$best_lang_to_download" --sub-format "srt/ass/best" --skip-download --ignore-errors --ignore-config --paths "$tmp_dir" --output "%(channel)s - %(title)s [%(id)s].%(upload_date)s.%(ext)s" "$url"
     fi
