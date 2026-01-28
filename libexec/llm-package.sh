@@ -157,7 +157,7 @@ generate_hotkey() {
     # Remove non-alphanumeric, split by space
     local clean_name="${name//[^a-zA-Z0-9 ]/}"
     read -ra words <<< "$clean_name"
-    
+
     # Attempt first letters of words
     for word in "${words[@]}"; do
         local char="${word:0:1}"
@@ -182,7 +182,7 @@ generate_hotkey() {
             echo "$char"; return
         fi
     done
-    
+
     # 5. Last resort: random uppercase (unlikely to reach here)
     echo "X"
 }
@@ -260,6 +260,7 @@ load_menu_items() {
     done < <(find "$PROMPT_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
 }
 
+# Line 318
 display_menu() {
 
     local state="$1" # "locked" or "active"
@@ -268,13 +269,13 @@ display_menu() {
     clear
     echo -e "\n${B_WHITE}--- LLM-PACKAGE Menu ---${NC}"
 
-if [ "$state" == "locked" ]; then
-        echo -e "${GRAY}Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/${NC}\n"
+    if [ "$state" == "locked" ]; then
+        echo -e "${GRAY}Sticky prompts are loaded. Paste a URL or press any key to edit.${NC}\n"
     else
         echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/\n"
         echo -e "${YELLOW}Target:${NC} $url"
         echo -e "${YELLOW}Current Selections:${NC}"
-        # ... (Print active selections loop) ...
+        # ... (Print active selections loop - this comment remains) ...
         echo ""
     fi
 
@@ -283,41 +284,73 @@ if [ "$state" == "locked" ]; then
         IFS='|' read -r hotkey cat item _ _ _ special color <<< "${menu_items[$i]}"
 
         if [ "$state" == "locked" ]; then
-            # DIMMED MODE
-            printf " ${GRAY}%s [ ] [%-8s] | %s${NC}\n" "$hotkey." "$cat" "$item"
+            # DIMMED MODE (MODIFIED)
+            # --- START of CHANGE 1 ---
+            local status="[ ]"
+            # Check if the index is in our 'selected' map to show sticky state
+            [[ -v "selected_indices[$i]" ]] && status="[x]"
+            # Use the status variable instead of a hardcoded "[ ]"
+            printf " ${GRAY}%s %s [%-8s] | %s${NC}\n" "$hotkey." "$status" "$cat" "$item"
+            # --- END of CHANGE 1 ---
         else
             # ACTIVE MODE
             local status="[ ]"
             [[ -v "selected_indices[$i]" ]] && status="[${GREEN}x${NC}]"
+            # Use %b for status to interpret the color codes
             printf " %s %b ${color}[%-8s]${NC} | %s\n" "$hotkey." "$status" "$cat" "$item"
         fi
     done
 
     # --- FOOTER ---
     echo ""
-    if [ "$state" == "locked" ]; then
-        echo -e "${GRAY} o. [ ] Omit downloading comments.${NC}"
-        echo -e "${GRAY} d. [ ] Disable Sticky Prompts.${NC}"
-    else
-        # Print global options with active colors
-        local omit_status="[ ]"; [[ "$omit_comments" == true ]] && omit_status="[${GREEN}x${NC}]"
-        local sticky_status="[ ]"; [[ "$opt_no_sticky" == true ]] && sticky_status="[${GREEN}x${NC}]"
-        local no_save_status="[ ]"; [[ "$opt_no_save_this_run" == true ]] && no_save_status="[${GREEN}x${NC}]"
 
-        printf " %s %b %b\n" "o." "$omit_status" "${B_WHITE}Omit downloading comments.${NC}"
-        printf " %s %b %b\n" "d." "$sticky_status" "${B_WHITE}Disable Sticky Prompts.${NC}"
-        printf " %s %b %b\n" "x." "$no_save_status" "${B_WHITE}Don't update Sticky Prompts state from this run.${NC}"
-        local timer_status="[ ]"
-        if [[ "$opt_timer_enabled" == true ]]; then
-            timer_status="[${GREEN}x${NC}]"
+    # Define Global Toggles once: [Hotkey|Description|Variable Name]
+    local -a global_toggles=(
+        "o|Omit downloading comments.|omit_comments"
+        "d|Disable Sticky Prompts.|opt_no_sticky"
+        "x|Don't update Sticky Prompts state from this run.|opt_no_save_this_run"
+        "t|Auto-run timer.|opt_timer_enabled"
+    )
+
+    for option_line in "${global_toggles[@]}"; do
+        IFS='|' read -r hotkey desc var_name <<< "$option_line"
+
+        # --- REFACTOR START ---
+        # 1. Prepare the final description text for BOTH states first.
+        local current_desc="$desc"
+        if [[ "$hotkey" == "t" ]]; then
+            current_desc="${current_desc} (${opt_timer_seconds}s)."
         fi
-        printf " %s %b %b\n" "t." "$timer_status" "${B_WHITE}Auto-run timer (${opt_timer_seconds}s).${NC}"
-        echo ""
+
+        # 2. Determine the status ([ ] or [x]) for BOTH states.
+        local status="[ ]"
+        local var_value="${!var_name}"
+        [[ "$var_value" == true ]] && status="[x]"
+        # --- REFACTOR END ---
+
+        if [ "$state" == "locked" ]; then
+            # LOCKED / DIMMED FORMAT
+            # Now it uses the correct 'current_desc' and 'status'
+            printf " ${GRAY}%s %s %s${NC}\n" "$hotkey." "$status" "$current_desc"
+        else
+            # ACTIVE FORMAT
+            # Overwrite status with the colored version if active
+            [[ "$var_value" == true ]] && status="[${GREEN}x${NC}]"
+            # Now it also uses the correct 'current_desc'
+            printf " %s %b ${B_WHITE}%s${NC}\n" "$hotkey." "$status" "$current_desc"
+        fi
+    done
+    echo ""
+    if [[ "$state" == "active" ]]; then
         if [[ "$opt_timer_enabled" == true && -n "$countdown_value" && "$countdown_value" -gt 0 ]]; then
             printf "${YELLOW} Auto-run in %2ss... |${NC}" "$countdown_value"
         fi
-        echo -e "${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} to Run${NC}\n"
-        printf " %s %b %b\n" "u." "${B_WHITE}Re-enter URL..${NC}\n"
+
+        # Action/Navigation options
+        echo -e "${B_BLUE} Enter Hotkey to toggle, or ${B_WHITE}+${B_BLUE} to Run${NC}"
+        echo ""
+        printf " %s %b\n" "u." "${B_WHITE}Re-enter URL..${NC}"
+        echo "" # Add trailing newline for clean prompt placement
     fi
 }
 
