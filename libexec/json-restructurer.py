@@ -1,6 +1,7 @@
 import json
 import sys
 import os
+from datetime import datetime
 
 def process_and_restructure_comments(input_file_path):
     """
@@ -27,8 +28,13 @@ def process_and_restructure_comments(input_file_path):
             'id': comment.get('id'),
             'author': comment.get('author'),
             'text': comment.get('text'),
+            'date': None,
             'replies': []  # Initialize replies list for every comment
         }
+
+        if timestamp := comment.get('timestamp'):
+            # Convert Unix timestamp to a YYYY-MM-DD formatted string
+            opt_comment['date'] = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
 
         # Conditionally include non-default values
         if (like_count := comment.get('like_count', 0)) > 0:
