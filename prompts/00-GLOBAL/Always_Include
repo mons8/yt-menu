@@ -5,11 +5,11 @@ The very first thing is to make a heading. The ideal format is this:
 [webpage_url]
 
 ---
-• **Views:** [view_count] • **Likes:** [like_count] • **Uploaded:** [upload_date] UTC • **Duration:** [duration_string] • **Comments:** [comment_count] •
+• **Views:** [view_count] • **Likes:** [like_count] • **Uploaded:** [upload_date] UTC • **Duration:** [duration_string] • **Comments:** [total_comments] •
 • **Channel:** [[channel]]([channel_url]) • **Subscribers:** [channel_follower_count] •
 
 <!-- IF was_live is true, include the next line -->
-This content was originally a _live stream_.
+This content was originally a __live stream__.
 
 <!-- Parse [user_input_url]. If not playlist, omit the following line. Otherwise, populate playlist_index, and playlist_id below (these may also be stated directly in the metadata). -->
 Part [playlist_index] of playlist "[[playlist]](https://www.youtube.com/[playlist_id])"
