@@ -270,7 +270,7 @@ display_menu() {
     echo -e "\n${B_WHITE}--- LLM-PACKAGE Menu ---${NC}"
 
     if [ "$state" == "locked" ]; then
-        echo -e "${GRAY}Sticky prompts are loaded. Paste a URL or press any key to edit.${NC}\n"
+        echo -e "\n Paste URL or press any key to edit.\n"
     else
         echo -e "Edit the menu and prompts dynamically by changing folder names, filenames and contents in ../yt-menu/prompts/\n"
         echo -e "${YELLOW}Target:${NC} $url"
@@ -452,9 +452,11 @@ while true; do
         if [ -z "$url_input" ]; then continue; fi
 
         url="$url_input"
-        if [[ "$url" != http* ]]; then
-            echo "Invalid URL. Must start with http." >&2; sleep 1; url=""; continue
-        fi
+
+#     Disableroony to disallow non url entries in Paste URL, yeah baby
+#         if [[ "$url" != http* ]]; then
+#             echo "Invalid URL. Must start with http." >&2; sleep 1; url=""; continue
+#         fi
 
         # URL is valid, ACTIVATE TIMER if enabled
         if [ "$opt_timer_enabled" = true ]; then
@@ -550,8 +552,8 @@ while true; do
                     # We will keep text in memory but unselect the item.
                 else
                     echo -e "\n${B_WHITE}Enter custom prompt (End with 'EOF' on new line):${NC}"
-                    # If previous text exists, show it (optional, but good UX)
-                    if [ -n "$custom_prompt_text" ]; then echo -e "${CYAN}Current:${NC} $custom_prompt_text"; fi
+                    ## Below shows previously saved prompt in editor. However, it's completely broken since the input field is trash and it's not possible to delete previous lines.
+                    #if [ -n "$custom_prompt_text" ]; then echo -e "${CYAN}Current:${NC} $custom_prompt_text"; fi
 
                     line=""; buffer=""
                     while IFS= read -r line; do [[ "$line" == "EOF" ]] && break; buffer+="${line}"$'\n'; done
