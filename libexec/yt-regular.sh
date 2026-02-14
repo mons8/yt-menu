@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright (C) 2025 mons8 <115350611+mons8@users.noreply.github.com>
 #
@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
-
 # This script prompts the user for a URL and then passes it to yt-dlp.
+
+# --- LOAD ENV FILE ---
+source "$(dirname "$0")/../lib/environment.sh"
 
 # Prompt the user for a URL without adding a newline at the end.
 printf "Enter URL: "
@@ -29,4 +30,4 @@ read -r url
 # Execute yt-dlp, passing the user's input as a single argument.
 # It is CRITICAL to double-quote the variable "$url" to handle URLs
 # that contain special characters like '&', '?', or spaces.
-yt-dlp "$url"
+${YTDLP_COMMAND_ARRAY[@]} --config-locations "$config_file" "$url"

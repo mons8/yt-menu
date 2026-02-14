@@ -42,3 +42,9 @@ YTDLP_COMMAND_ARRAY_NONERROR=(
     "$VENV_PYTHON"
     "$WORK_DIR/vendor/yt-dlp/yt_dlp/__main__.py"
 )
+
+# Default configuration file for normal YT-DLP. It's not used in yt-menu normal functioning
+# In yt-menu it's used only for running normal yt-dlp option and the option for editing normal defaults file
+# Use $XDG_CONFIG_HOME if set, otherwise default to $HOME/.config.
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/yt-dlp"
+config_file="$config_dir/config"

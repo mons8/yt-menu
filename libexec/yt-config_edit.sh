@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright (C) 2025 mons8 <115350611+mons8@users.noreply.github.com>
 #
@@ -21,10 +21,9 @@
 
 set -e
 
-# Adhere to the XDG Base Directory Specification.
-# Use $XDG_CONFIG_HOME if set, otherwise default to $HOME/.config.
-config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/yt-dlp"
-config_file="$config_dir/config"
+
+# --- LOAD ENV FILE ---
+source "$(dirname "$0")/../lib/environment.sh"
 
 # Ensure the configuration directory exists before attempting to open the file.
 mkdir -p "$config_dir"
