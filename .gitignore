@@ -1,31 +1,36 @@
-# WIP
-.wip-ignore/
-libexec/config-wizard.sh
-docs/improvements.md
-
-# editor-specific swap/temporary files
-.kate-swp
-.swp
-.swo
-
-# macOS system files
+# Editor & OS junk
+.*.sw?
+.*.kate-swp
+*~
+*.bak
+.vscode/
+*.code-workspace
+.idea/
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# vendor
+# vendor contains installed dependencies
 vendor/
 
 # python
 .venv/
 __pycache__/
 .pyc
+.env
 
-# configuration
+# ../config contains only generated files
 config/*
 !config/.gitkeep
+
 .env
 .cfg
 
-# temp
+# temporary
 tmp/
 
 # FFmpeg licence compliance
@@ -35,3 +40,8 @@ ffmpeg-archive.tar.xz
 
 # helper scripts
 helper_scripts/
+
+# WIP
+.wip-ignore/
+libexec/config-wizard.sh
+docs/improvements.md
