@@ -28,6 +28,7 @@ CUSTOM_TEXT_FILE="$CONFIG_DIR/CustomPrompt.state"
 
 # --- DATA STRUCTURES ---
 declare -a menu_items
+# menu_items stores: "hotkey|cat_name|item_name|file_path|json_key|select_type|special_flag|color_code"
 declare -a silent_includes
 declare -A selected_indices # map: index -> 1
 declare -A assigned_hotkeys # map: char -> 1 (collision detection)
@@ -40,6 +41,17 @@ opt_timer_seconds=5
 omit_comments=false
 comments_basedir=""
 transcription_was_skipped=false
+# ---
+# The prompt menu options are dynamically generated from directory names and filenames in ../prompts
+# ---
+declare -a global_toggles=(
+    "o|Omit downloading comments.|omit_comments"
+    "d|Disable Sticky Prompts.|opt_no_sticky"
+    "x|Don't update Sticky Prompts state from this run.|opt_no_save_this_run"
+    "t|Auto-run timer.|opt_timer_enabled"
+)
+# global_toggles is the "firm" menu options below the prompts: [Hotkey|Description|Variable Name]
+# (Changing or adding items here is sufficient to remove the hotkey from the pool of automatically assigned keys in the dynamic prompt menu.)
 
 # --- LIBRARY & PRE-FLIGHT ---
 if ! command -v jq &> /dev/null; then echo "[yt-menu] Error: 'jq' command not found." >&2; exit 1; fi
@@ -47,15 +59,6 @@ if ! command -v realpath &> /dev/null; then echo "[yt-menu] Error: 'realpath' co
 if [ ! -d "$PROMPT_DIR" ]; then echo "[yt-menu] Error: Prompt directory not found at '$PROMPT_DIR'." >&2; exit 1; fi
 
 source "$(dirname "$0")/../lib/environment.sh"
-
-# --- DATA STRUCTURES ---
-# menu_items stores: "hotkey|cat_name|item_name|file_path|json_key|select_type|special_flag|color_code"
-declare -a menu_items
-declare -a silent_includes
-declare -A selected_indices # map: index -> 1
-declare -A assigned_hotkeys # map: char -> 1 (collision detection)
-declare -A category_selections # map: cat_name -> selected_index (for 'single' type enforcement)
-custom_prompt_text=""
 
 # --- FUNCTIONS ---
 
@@ -188,18 +191,21 @@ generate_hotkey() {
 }
 
 # Recursively scans prompts directory
-# Recursively scans prompts directory
 load_menu_items() {
     menu_items=()
     silent_includes=()
     assigned_hotkeys=()
 
-    # --- RESRVE STATIC HOTKEYS ---
-    # Pre-assign keys used for hardcoded menu options to prevent
-    # the dynamic generator from assigning them to prompt files.
-    assigned_hotkeys["o"]=1  # Reserved for Omit
-    assigned_hotkeys["d"]=1  # Reserved for Disable Sticky
-    assigned_hotkeys["x"]=1  # Reserved for Don't Update Sticky
+    # --- DYNAMICALLY RESRVE STATIC HOTKEYS (MODIFIED BLOCK) ---
+    # Loop through the centralized global_toggles array to reserve keys
+    for option_line in "${global_toggles[@]}"; do
+        IFS='|' read -r hotkey _ _ <<< "$option_line"
+        assigned_hotkeys["${hotkey,,}"]=1
+    done
+
+    # Also reserve 'u' for Re-enter URL and '+' for Run
+    assigned_hotkeys["u"]=1
+    assigned_hotkeys["+"]=1 # Though '+' won't clash with generate_hotkey, better to be explicit.
 
     # Loop through Category Directories
     while IFS= read -r cat_dir; do
@@ -260,7 +266,6 @@ load_menu_items() {
     done < <(find "$PROMPT_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
 }
 
-# Line 318
 display_menu() {
 
     local state="$1" # "locked" or "active"
@@ -303,15 +308,6 @@ display_menu() {
 
     # --- FOOTER ---
     echo ""
-
-    # Define Global Toggles once: [Hotkey|Description|Variable Name]
-    local -a global_toggles=(
-        "o|Omit downloading comments.|omit_comments"
-        "d|Disable Sticky Prompts.|opt_no_sticky"
-        "x|Don't update Sticky Prompts state from this run.|opt_no_save_this_run"
-        "t|Auto-run timer.|opt_timer_enabled"
-    )
-
     for option_line in "${global_toggles[@]}"; do
         IFS='|' read -r hotkey desc var_name <<< "$option_line"
 
