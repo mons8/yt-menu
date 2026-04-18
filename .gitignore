@@ -45,3 +45,11 @@ helper_scripts/
 .wip-ignore/
 libexec/config-wizard.sh
 docs/improvements.md
+
+*.mov
+*.mp4
+*.avi
+*.mkv
+*.srt
+*.vtt
+*.info.json
