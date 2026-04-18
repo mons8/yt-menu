@@ -38,13 +38,14 @@ YTDLP_COMMAND_ARRAY=(
 )
 
 # Use with "${YTDLP_COMMAND_ARRAY_NONERROR[@]}"
+# (FAIRLY sure this is completely unused and may be deleted (after verification))
 YTDLP_COMMAND_ARRAY_NONERROR=(
     "$VENV_PYTHON"
     "$WORK_DIR/vendor/yt-dlp/yt_dlp/__main__.py"
 )
 
-# Default configuration file for normal YT-DLP. It's not used in yt-menu normal functioning
-# In yt-menu it's used only for running normal yt-dlp option and the option for editing normal defaults file
+# Default configuration file for normal YT-DLP. It's not used in for must worker scripts, as those define all of their flags in each command.
+# In yt-menu it's used only for running normal yt-dlp option (yt-regular.sh) and the option for editing normal defaults file
 # Use $XDG_CONFIG_HOME if set, otherwise default to $HOME/.config.
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/yt-dlp"
 config_file="$config_dir/config"
