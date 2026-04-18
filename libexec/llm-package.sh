@@ -37,12 +37,12 @@ custom_prompt_text=""
 opt_no_sticky=false
 opt_no_save_this_run=false
 opt_timer_enabled=false
-opt_timer_seconds=5
+opt_timer_seconds=3
 omit_comments=false
 comments_basedir=""
 transcription_was_skipped=false
 # ---
-# The prompt menu options are dynamically generated from directory names and filenames in ../prompts
+# The prompt menu options are dynamically generated from directory names and filenames within ../prompts by load_menu_items()
 # ---
 declare -a global_toggles=(
     "o|Omit downloading comments.|omit_comments"
@@ -50,7 +50,8 @@ declare -a global_toggles=(
     "x|Don't update Sticky Prompts state from this run.|opt_no_save_this_run"
     "t|Auto-run timer.|opt_timer_enabled"
 )
-# global_toggles is the "firm" menu options below the prompts: [Hotkey|Description|Variable Name]
+# global_toggles is the "firm" menu options below the prompts.
+# [Hotkey|Description|Variable Name]
 # (Changing or adding items here is sufficient to remove the hotkey from the pool of automatically assigned keys in the dynamic prompt menu.)
 
 # --- LIBRARY & PRE-FLIGHT ---
