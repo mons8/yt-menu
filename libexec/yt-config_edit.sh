@@ -22,8 +22,10 @@
 set -e
 
 
-# --- LOAD ENV FILE ---
-source "$(dirname "$0")/../lib/environment.sh"
+# Source the master environment file. It defines WORK_DIR, VENV_PYTHON, YTDLP_COMMAND.
+# (BASH_SOURCE[0] + readlink -f resolves all symlinks → real project root)
+SCRIPT_DIR="$(cd -P "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" >/dev/null && pwd)"
+source "$SCRIPT_DIR/../lib/environment.sh"
 
 # Ensure the configuration directory exists before attempting to open the file.
 mkdir -p "$config_dir"

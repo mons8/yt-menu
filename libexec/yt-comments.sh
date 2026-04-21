@@ -20,8 +20,9 @@
 # This script prompts the user for a URL and then passes it to yt-dlp with flags for downloading only commends and description.
 
 # Source the master environment file. It defines WORK_DIR, VENV_PYTHON, YTDLP_COMMAND.
-# The path is relative to this script's location.
-source "$(dirname "$0")/../lib/environment.sh"
+# (BASH_SOURCE[0] + readlink -f resolves all symlinks → real project root)
+SCRIPT_DIR="$(cd -P "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" >/dev/null && pwd)"
+source "$SCRIPT_DIR/../lib/environment.sh"
 
 # --- Configuration ---
 config_file="$WORK_DIR/config/yt-comments.cfg"
