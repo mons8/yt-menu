@@ -3,9 +3,11 @@
 
 `yt-menu` is a power-user TUI built on top of `yt-dlp`. It minimizes clicks for anyone that likes to archive online content. 
 
-Additionally, it features a _powerful_ methodology for facilitating AI-assisted analysis with the `llm-package` generator, a tool which conveniently converts online videos, comments and metadata (plus injecting editable prompts of your own choosing) into a single, human-and-machine-readable and token-conscious JSON dataset for feeding __contextual RAG-adjacent prompts__ to Large Language Models for maximally quick, complete and competent analysis.
+Notably, it also features a _powerful_ methodology for facilitating AI-assisted analysis with the `llm-package` generator. This little tool does two things:
+1. Conveniently converts online videos, comments and metadata into a single, human-and-machine-readable and token-conscious JSON dataset for feeding _contextual RAG-adjacent packages_ to Large Language Models
+2. Allows for injecting pre-set or custom prompts into the same dataset file for maximally quick, complete and competent analysis.
 
-For system safety and convenience a dead-simple script installs Python dependencies in an isolated `venv` as well as installing other dependencies, such as `FFmpeg`, automatically.
+It installs all dependencies such as `FFmpeg` and `yt-dlp` quickly and easily with an installer script and uses a `venv` virtual envionment for all Python dependencies to avoid contaminating the main system with strange Python packages.
 
 ---
 <img width="809" height="339" alt="20260106_230800" src="https://github.com/user-attachments/assets/bab97c26-2ebb-4cfe-b97c-694be26ade94" />
@@ -22,33 +24,24 @@ _Prompt Injection_
 
 ### `llm-package`, AI-Context Pipeline 
 
-```
-Select Option: 7 - llm-package
-```
-
-Enter URL and **append <kbd>+</kbd>** to the end to access the menu.
-```
-e.g. https://domain.com/video-url+
-```
-
-
 *   **Utility:** Turns a video, comments & metadata into a **knowledge packet** for AI analysis.
 *   **Token Conscious:** The output is a single, minimized `.json` file ready to be pasted into a chat window or used for RAG (Retrieval-Augmented Generation).
-*   **Clipboard:** The final package path (or content) is automatically copied to your clipboard for immediate use.
-*   **Prompt Injection:** A convenient TUI menu allows you to inject modular instructions directly into the payload. Your choices are then injected directly into the final JSON payload. 
-	*   *Fully Extensible:* The menu is built dynamically from the `prompts/` directory. You can add or edit categories and prompts by creating folders and files.
-    *   *Interactive Mode:* Select <kbd>Custom</kbd> to type ad-hoc instructions on the fly.
+*   **Clipboard:** The final package path (or content) is automatically copied to clipboard for immediate use and saved in a user-choice directory.
+*   **Prompt Injection:** A one-press TUI menu allows you to inject modular instructions directly into the payload. Your choices are then injected directly into the final JSON payload. 
+	*   *Extensible:* The menu is built dynamically from the `prompts/` directory. It's preloaded with sensible prompts and you can add or edit categories and prompts by simply creating folders and files in that directory.
+    *   *Custom Prompts:* Select <kbd>Custom</kbd> quickly to add ad-hoc prompts on the fly.
 	*   *Flexible Downloads:* Toggle <kbd>o</kbd> in the menu to **omit comments**, downloading only the transcription and metadata to save bandwidth and tokens.
 *   **Rich Payload:** In addition to <kbd>prompts</kbd> and <kbd>metadata</kbd>, the `JSON` package contains:
-    *   *<kbd>Transcription:</kbd>* Auto-selects the best available subtitle (prioritizing human-written and native language) and processes it into a readable and token sensitive transcription format.
+    *   *<kbd>Transcription:</kbd>* Auto-selects the best available transcription (human-written and native language) and processes it into a readable and token sensitive format.
     *   *<kbd>Comments:</kbd>* Restructures flat comment dumps into human-and-AI-readable conversation threads for analysis and public reception context. This process prunes out _a lot_ of unneeded and detrimental tokens from the API output.
 
-### Audio Archival
-Robust and convenient tools for hoarders and archivists.
-*   **Album & Channel Scraping:** Automates the downloading of entire albums or discographies via Channel `/releases` dynamic scraping.
-*   **Metadata Tagging:** Automatically applies sensible `ID3` tags and filenaming conventions.
+### Archival
+Convenient tools for hoarders and archivists.
+*   **Album & Channel Scraping:** Automates the downloading of video content to audio (to mp3) via Channel `/releases` dynamic scraping.
+*   **Metadata Tagging:** Automatically applies `ID3` tags and filenaming conventions.
 *   **Split Workflows:** Dedicated modes for <kbd>Songs</kbd>, <kbd>Albums</kbd>, or entire <kbd>Channel Discographies</kbd>.
 *   **Download Directories:** Customize download folders per mode.
+*   **Normal yt-dlp interface:** Allows for normal video download & editing of yt-dlp config file.
 
 ## Key Features
 
@@ -94,7 +87,7 @@ The installation process is fully automated.
 
 **Note:** You do **not** need to activate the virtual environment manually. The binary wrapper automatically routes execution through the isolated environment.
 
-## Project Structure
+## Structure
 
 ```text
 ├── .venv/                       # Local Python virtual environment (Git-ignored)
