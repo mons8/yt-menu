@@ -20,7 +20,9 @@
 # This script sets up the environment for all yt-menu scripts.
 
 # Define path to work directory, location of all scripts
-WORK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )" # Points to project root
+# Robust version (works even if any script is symlinked)
+SCRIPT_DIR="$(cd -P "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" >/dev/null && pwd)"
+WORK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Define the absolute path to your venv's Python interpreter.
 VENV_PYTHON="$WORK_DIR/.venv/bin/python3"

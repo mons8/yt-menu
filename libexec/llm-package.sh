@@ -3,6 +3,18 @@
 # --- CONSTANTS & CONFIGURATION ---
 set -o pipefail
 
+# Source the master environment file. It defines WORK_DIR, VENV_PYTHON, YTDLP_COMMAND.
+# (BASH_SOURCE[0] + readlink -f resolves all symlinks → real project root)
+SCRIPT_DIR="$(cd -P "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" >/dev/null && pwd)"
+source "$SCRIPT_DIR/../lib/environment.sh"
+
+# Paths
+PROMPT_DIR="$WORK_DIR/prompts"
+CONFIG_DIR="$WORK_DIR/config"
+MAIN_CONFIG="$CONFIG_DIR/llm-package.cfg"
+STATE_FILE="$CONFIG_DIR/PromptSelection.state"
+CUSTOM_TEXT_FILE="$CONFIG_DIR/CustomPrompt.state"
+
 # Colors
 NC='\e[0m'
 GREEN='\e[0;32m'
@@ -18,13 +30,6 @@ GRAY='\e[1;30m'
 
 # Palette for Category rotation
 COLORS=('\e[0;32m' '\e[1;34m' '\e[1;36m' '\e[0;33m' '\e[1;33m' '\e[0;35m' '\e[1;35m' '\e[0;31m' '\e[1;37m')
-
-# Paths
-PROMPT_DIR="$(dirname "$0")/../prompts"
-CONFIG_DIR="$(dirname "$0")/../config"
-MAIN_CONFIG="$CONFIG_DIR/llm-package.cfg"
-STATE_FILE="$CONFIG_DIR/PromptSelection.state"
-CUSTOM_TEXT_FILE="$CONFIG_DIR/CustomPrompt.state"
 
 # --- DATA STRUCTURES ---
 declare -a menu_items
@@ -58,11 +63,6 @@ declare -a global_toggles=(
 if ! command -v jq &> /dev/null; then echo "[yt-menu] Error: 'jq' command not found." >&2; exit 1; fi
 if ! command -v realpath &> /dev/null; then echo "[yt-menu] Error: 'realpath' command not found." >&2; exit 1; fi
 if [ ! -d "$PROMPT_DIR" ]; then echo "[yt-menu] Error: Prompt directory not found at '$PROMPT_DIR'." >&2; exit 1; fi
-
-# Source the master environment file. It defines WORK_DIR, VENV_PYTHON, YTDLP_COMMAND.
-# (BASH_SOURCE[0] + readlink -f resolves all symlinks → real project root)
-SCRIPT_DIR="$(cd -P "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")" >/dev/null && pwd)"
-source "$SCRIPT_DIR/../lib/environment.sh"
 
 # --- FUNCTIONS ---
 
