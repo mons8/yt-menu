@@ -1,14 +1,28 @@
---paths '/media/m/storage/Project backup/YT/tmp3'
+#   This configuration file pertains only to the instance of yt-dlp which yt-menu manages,
+#   not any (if any) system-wide installation of yt-dlp.
+
+#   1. Uncomment and edit your download directory for "Option 4: Normal yt-dlp":
+#--paths '/your/chosen/path/here'
+
+#   2. Choose your video resolution:
+# Download the video with smallest resolution no worse than [resolution]p,
+# or the video with the largest resolution available if there is no such video,
+# preferring better codec and then larger total bitrate for the same resolution
+# -S "lang" selects for best quality if default audio stream
+-S "lang,+res:720,codec,br"
+
+#   The rest of this config is preset with sensible standards:
+
+# Some sites may use naming conventions for Title which are not practical to use as filename (Facebook...):
+#--output "%(date)s - %(channel)s - %(ext)s"
+# Normal filename structure: Channel - Title.Date.PlaylistNumber (padded with 0 if one digit).FileExtension
 --output "%(channel)s - %(title)s.%(upload_date)s.%(autonumber)02d.%(ext)s"
 
-# Restrict filenames to only ASCII characters, and avoid "&" and spaces in filenames
+# Restrict filenames to ASCII characters, avoid "&" and spaces:
 --windows-filenames
 
-## Download all the available subtitles
-#--all-subs
-
-# English subs languages config only, --embed-subs or --write-subs needed for actual output
---write-auto-subs --sub-langs "^en(-[a-zA-Z]+)*$"
+# English subs languages config only, --embed-subs or --write-subs are needed, if neither are present no sub donwload will occur.
+--write-auto-subs --sub-langs "en.*"
 
 # Do not exit on error, crucial for downloading subtitles (wherein not finding a specific language results in an error)
 -i
@@ -19,15 +33,6 @@
 # Embed metadata to the video file. Also adds chapters to file
 --embed-metadata
 
-# Write description (separate file)
---write-description
-
-# Write comments (separate file)
---write-comments
-
-# Do not overwrite existing output files
-#--no-overwrites
-
 # Download only the video, if the URL refers to a video AND a playlist
 --no-playlist
 
@@ -36,11 +41,20 @@
 --max-sleep-interval 2
 
 # Number of fragments of a dash/hlsnative video that should be download concurrently (default is 1)
+# May interfere with subtitle download in very rare situations.
 --concurrent-fragments 4
 
-# Download the video with smallest resolution no worse than 720p,
-# or the video with the largest resolution available if there is no such video,
-# preferring better codec and then larger total bitrate for the same resolution
--S "lang,+res:720,codec,br"
+# Do not overwrite existing output files
+#--no-overwrites
 
-# -S "lang" above selects for best quality unless not default audio stream
+# Authenticate using your own cookies from your browser to bypass restrictions
+# --cookies-from-browser chrome
+
+## Download all available subtitles
+#--all-subs
+
+# Write description (separate file)
+#--write-description
+
+# Write comments (separate file)
+#--write-comments
